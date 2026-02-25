@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CreateBlockDialog } from "@/components/create-block-dialog";
+import { CreateBlockDialog } from "@/features/create-block";
 
 describe("CreateBlockDialog — form validation (US4)", () => {
   const onSubmit = vi.fn();

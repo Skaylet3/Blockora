@@ -1,0 +1,96 @@
+// prisma/schema.prisma
+// Blockora (Postgres) — MVP schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum BlockType {
+  NOTE
+  TASK
+  SNIPPET
+  IDEA
+  LINK
+}
+
+// Single source of truth for block lifecycle state.
+// archivedAt timestamp is set when status transitions to ARCHIVED (audit trail).
+enum BlockStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum BlockVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  blocks        Block[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Block {
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String          @db.Uuid
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title      String
+  content    String
+
+  type       BlockType       @default(NOTE)
+  status     BlockStatus     @default(ACTIVE)
+  visibility BlockVisibility @default(PRIVATE)
+
+  tags       String[]        @default([])
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  archivedAt DateTime?       // set when status → ARCHIVED (audit trail only)
+
+  // Indexes
+  @@index([userId, createdAt])  // pagination: ORDER BY createdAt DESC per user
+  @@index([userId, status])     // filter by lifecycle state
+  @@index([userId, type])       // filter by block type
+  // Note: GIN index on tags and tsvector(title, content) added via raw migration
+  // See: prisma/migrations/manual/001_add_gin_indexes.sql
+
+  @@map("blocks")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique  // stored as Argon2id hash of the raw opaque token
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?           // null = active; set = revoked (logout / rotation)
+
+  @@index([userId])
+
+  @@map("refresh_tokens")
+}

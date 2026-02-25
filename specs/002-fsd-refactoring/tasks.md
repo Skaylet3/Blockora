@@ -1,0 +1,29 @@
+# Tasks: FSD Architecture Refactoring
+
+- [x] **Phase 0: Preparation**
+  - [x] Create `src` directory structure (app, pages-flat, widgets, features, entities, shared)
+  - [x] Update `tsconfig.json` path aliases to `@/*: ["./src/*"]`
+- [x] **Phase 1: Shared Layer**
+  - [x] Migrate `components/ui/*` to `src/shared/ui/`
+  - [x] Create public API for UI components
+  - [x] Migrate `lib/utils.ts` and `lib/tag-colors.ts` to `src/shared/lib/`
+- [x] **Phase 2: Entities Layer**
+  - [x] Identify and move Block entity types and `block-card.tsx`
+  - [x] Identify and move User entity types
+  - [x] Create public APIs for Entities
+- [x] **Phase 3: Features Layer**
+  - [x] Migrate `create-block-dialog.tsx` to `src/features/create-block/`
+  - [x] Migrate auth components to `src/features/auth/`
+  - [x] Migrate profile form to `src/features/update-profile/`
+  - [x] Create public APIs for Features
+- [x] **Phase 4: Widgets Layer**
+  - [x] Migrate Navbar components to `src/widgets/navbar/`
+  - [x] Migrate `blocks-client.tsx` to `src/widgets/blocks-list/`
+  - [x] Create public APIs for Widgets
+- [x] **Phase 5: Pages Layer**
+  - [x] Create FSD pages for Login, Dashboard, and Profile
+  - [x] Update Next.js `app/` routes to use FSD pages
+- [x] **Phase 6: Cleanup & Verification**
+  - [x] Remove old `components/` and `lib/` directories
+  - [x] Fix all import errors
+  - [x] Run build and tests (using `yarn`)
