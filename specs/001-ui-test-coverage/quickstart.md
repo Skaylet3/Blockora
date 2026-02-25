@@ -45,9 +45,6 @@ cd apps/web
 # Run all E2E tests (starts dev server automatically)
 yarn test:e2e
 
-# Run with interactive UI (for debugging)
-yarn test:e2e:ui
-
 # Run a specific spec file
 yarn test:e2e --grep "auth"
 ```

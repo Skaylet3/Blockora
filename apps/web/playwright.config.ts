@@ -5,9 +5,9 @@ export default defineConfig({
   timeout: 30_000,
   retries: 0,
   workers: 1,
+  outputDir: "/tmp/pw-results",
   use: {
     baseURL: "http://localhost:3000",
-    trace: "on-first-retry",
   },
   projects: [
     {
