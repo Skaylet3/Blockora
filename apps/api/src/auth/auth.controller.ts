@@ -10,6 +10,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { TokenPairDto } from './dto/token-pair.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtPayload } from './types/jwt-payload.type';
@@ -26,6 +28,7 @@ export class AuthController {
   @ApiResponse({
     status: 201,
     description: 'Registration successful — returns access and refresh tokens',
+    type: TokenPairDto,
   })
   @ApiResponse({ status: 409, description: 'Email already registered' })
   @ApiResponse({ status: 422, description: 'Validation error' })
@@ -41,6 +44,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login successful — returns access and refresh tokens',
+    type: TokenPairDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 422, description: 'Validation error' })
@@ -56,6 +60,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Token refreshed — old refresh token is invalidated',
+    type: TokenPairDto,
   })
   @ApiResponse({
     status: 401,
@@ -83,9 +88,10 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Returns userId and email of the authenticated user',
+    type: MeResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  me(@CurrentUser() user: JwtPayload) {
+  me(@CurrentUser() user: JwtPayload): MeResponseDto {
     return { userId: user.sub, email: user.email };
   }
 }
