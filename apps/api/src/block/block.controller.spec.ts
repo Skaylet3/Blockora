@@ -1,13 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockController } from './block.controller';
 import { BlockService } from './block.service';
 
 const mockBlockService = {
-  findAll: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  update: jest.fn(),
-  remove: jest.fn(),
+  findAll: vi.fn(),
+  findOne: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
 };
 
 const mockUser = { sub: 'user-1', email: 'user@test.com' };
