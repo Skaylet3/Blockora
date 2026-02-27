@@ -48,6 +48,9 @@ fi
 echo "Applying Prisma migrations..."
 yarn prisma migrate deploy
 
+echo "Generating Prisma client..."
+yarn prisma generate
+
 echo "Starting Nest dev app on localhost:${PORT}..."
 yarn ts-node -r tsconfig-paths/register src/main.ts > /tmp/api-e2e-app.log 2>&1 &
 APP_PID=$!

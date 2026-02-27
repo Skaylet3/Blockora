@@ -43,8 +43,11 @@ fi
 echo "Applying Prisma migrations..."
 yarn prisma migrate deploy
 
+echo "Generating Prisma client..."
+yarn prisma generate
+
 echo "Building backend sources for integration tests..."
-yarn tsc -p tsconfig.build.json --noEmitOnError false || true
+yarn tsc -p tsconfig.build.json --noEmitOnError false
 
 echo "Running integration tests with Vitest..."
 yarn vitest run --config vitest.int.config.ts
