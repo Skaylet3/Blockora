@@ -33,9 +33,6 @@ jobs:
       - name: Install deps
         run: yarn install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: yarn --cwd apps/api prisma generate
-
       - name: Install Playwright Chromium
         run: yarn --cwd apps/api playwright install chromium
 
