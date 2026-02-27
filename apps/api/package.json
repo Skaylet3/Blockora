@@ -20,6 +20,7 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:int": "bash ./test/integration/run-int-tests.sh",
     "test:e2e": "bash ./test/e2e/run-e2e-tests.sh",
+    "test:perf:sanity": "bash ./test/performance/run-perf-sanity.sh",
     "studio": "prisma studio"
   },
   "dependencies": {
