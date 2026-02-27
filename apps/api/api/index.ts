@@ -73,6 +73,11 @@ async function createApp(): Promise<express.Express> {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {
+    customCssUrl: 'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css',
+    customJs: [
+      'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js',
+      'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-standalone-preset.js',
+    ],
     swaggerOptions: { persistAuthorization: true },
   });
 
