@@ -6,7 +6,6 @@ import { config as loadDotenv } from 'dotenv';
 import express from 'express';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import serverless from 'serverless-http';
 import { AppModule } from '../src/app.module';
 import { validateEnv } from '../src/config/env';
 
@@ -24,9 +23,9 @@ function initializeEnv() {
   }
 }
 
-let cachedHandler: ReturnType<typeof serverless> | null = null;
+let cachedApp: express.Express | null = null;
 
-async function createHandler() {
+async function createApp(): Promise<express.Express> {
   initializeEnv();
   const config = validateEnv();
 
@@ -79,13 +78,18 @@ async function createHandler() {
 
   await app.init();
 
-  return serverless(expressApp);
+  return expressApp;
 }
 
 export default async function handler(req: any, res: any) {
-  if (!cachedHandler) {
-    cachedHandler = await createHandler();
+  if (!cachedApp) {
+    cachedApp = await createApp();
   }
 
-  return cachedHandler(req, res);
+  await new Promise<void>((resolve, reject) => {
+    res.on('finish', resolve);
+    res.on('close', resolve);
+    res.on('error', reject);
+    cachedApp!(req, res);
+  });
 }
