@@ -78,7 +78,7 @@ async function createHandler() {
 
   await app.init();
 
-  return serverless(expressApp);
+  return serverless(expressApp, { basePath: '/api' });
 }
 
 export default async function handler(req: any, res: any) {
