@@ -21,6 +21,7 @@
     "test:int": "bash ./test/integration/run-int-tests.sh",
     "test:e2e": "bash ./test/e2e/run-e2e-tests.sh",
     "test:perf:sanity": "bash ./test/performance/run-perf-sanity.sh",
+    "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio"
   },
   "dependencies": {
