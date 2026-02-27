@@ -1,8 +1,9 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateEnv } from './env';
 
 describe('validateEnv', () => {
   let originalEnv: NodeJS.ProcessEnv;
-  let exitSpy: jest.SpyInstance;
+  let exitSpy: ReturnType<typeof vi.spyOn>;
 
   const validEnv = {
     DATABASE_URL: 'postgresql://postgres:pass@localhost:5432/db',
@@ -13,7 +14,7 @@ describe('validateEnv', () => {
 
   beforeEach(() => {
     originalEnv = { ...process.env };
-    exitSpy = jest
+    exitSpy = vi
       .spyOn(process, 'exit')
       .mockImplementation((_code?: number | string | null) => {
         throw new Error(`process.exit called with code ${_code}`);

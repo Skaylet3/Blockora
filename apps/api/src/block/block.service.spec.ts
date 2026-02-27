@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BlockService } from './block.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BlockStatus } from '@prisma/client';
@@ -7,10 +8,10 @@ import { BlockStatus } from '@prisma/client';
 const mockPrisma = {
   db: {
     block: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
   },
 };

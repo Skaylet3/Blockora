@@ -50,6 +50,9 @@ $ yarn run start:prod
 # unit tests
 $ yarn run test
 
+# integration tests
+$ yarn run test:int
+
 # e2e tests
 $ yarn run test:e2e
 

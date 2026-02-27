@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
 import { APP_CONFIG } from '../config/config.module';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,22 +20,22 @@ const mockConfig = {
 const mockPrisma = {
   db: {
     user: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
     },
     refreshToken: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 };
 
 const mockJwtService = {
-  sign: jest.fn(() => 'test-access-token'),
-  verify: jest.fn(),
+  sign: vi.fn(() => 'test-access-token'),
+  verify: vi.fn(),
 };
 
 describe('AuthService', () => {

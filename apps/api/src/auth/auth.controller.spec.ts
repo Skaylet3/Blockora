@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
 const mockAuthService = {
-  register: jest.fn(),
-  login: jest.fn(),
-  refresh: jest.fn(),
-  logout: jest.fn(),
+  register: vi.fn(),
+  login: vi.fn(),
+  refresh: vi.fn(),
+  logout: vi.fn(),
 };
 
 describe('AuthController', () => {
