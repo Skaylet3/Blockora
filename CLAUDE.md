@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-25
 ## Active Technologies
 - TypeScript 5 (target ES2023, `nodenext` modules, `strictNullChecks: true`) + NestJS 11, `@nestjs/jwt ^10.2`, `argon2 ^0.43`, `@nestjs/swagger`, `zod ^3.x`, `class-validator`, `class-transformer`, Prisma 7 (001-api-auth-swagger)
 - PostgreSQL via Prisma 7 (existing schema + one migration: `token` → `tokenHash` on `RefreshToken`) (001-api-auth-swagger)
+- TypeScript 5 (strict mode) — `apps/web` (Next.js 16, React 19) + Next.js 16.1.6, React 19, Tailwind CSS v4, Sonner (toasts), Lucide React, Radix UI primitives — no external HTTP library (uses native `fetch`) (001-frontend-api-integration)
+- `localStorage` for access + refresh tokens; session cookie (`blockora-session=1`) retained for SSR route-guard only (001-frontend-api-integration)
 
 - TypeScript 5.9 (strict mode) + Playwright 1.50 (E2E), Vitest 3 + @testing-library/react 16 (component tests) (001-ui-test-coverage)
 
@@ -24,6 +26,7 @@ npm test && npm run lint
 TypeScript 5.9 (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 001-frontend-api-integration: Added TypeScript 5 (strict mode) — `apps/web` (Next.js 16, React 19) + Next.js 16.1.6, React 19, Tailwind CSS v4, Sonner (toasts), Lucide React, Radix UI primitives — no external HTTP library (uses native `fetch`)
 - 001-api-auth-swagger: Added TypeScript 5 (target ES2023, `nodenext` modules, `strictNullChecks: true`) + NestJS 11, `@nestjs/jwt ^10.2`, `argon2 ^0.43`, `@nestjs/swagger`, `zod ^3.x`, `class-validator`, `class-transformer`, Prisma 7
 
 - 001-ui-test-coverage: Added TypeScript 5.9 (strict mode) + Playwright 1.50 (E2E), Vitest 3 + @testing-library/react 16 (component tests)
