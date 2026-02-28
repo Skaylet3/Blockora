@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import './globals.css';
@@ -17,6 +17,13 @@ export const metadata: Metadata = {
 	title: 'Blockora — Structure your thoughts',
 	description:
 		'A structured thinking environment. Capture, organize, and manage your knowledge blocks.',
+};
+
+export const viewport: Viewport = {
+	width: 'device-width',
+	initialScale: 1,
+	maximumScale: 1,
+	userScalable: false,
 };
 
 export default function RootLayout({
