@@ -3,8 +3,10 @@
 import type { Block, BlockStatus, BlockType } from '@/entities/block';
 import { BlockCard } from '@/entities/block';
 import { CreateBlockDialog } from '@/features/create-block';
+import { DeleteBlockButton } from '@/features/delete-block';
+import { EditBlockDialog } from '@/features/edit-block';
+import { blocksApi } from '@/shared/api/blocks.api';
 import { cn, getTagColor, TYPE_COLORS } from '@/shared/lib';
-import { getAllTags } from '@/shared/lib/mock-data';
 import { Button, Input, Select } from '@/shared/ui';
 import { LayoutGrid, Plus, Search, SlidersHorizontal } from 'lucide-react';
 import * as React from 'react';
@@ -12,11 +14,18 @@ import { toast } from 'sonner';
 
 const BLOCK_TYPES: { label: string; value: string }[] = [
 	{ label: 'All Types', value: '' },
-	{ label: 'Note', value: 'Note' },
-	{ label: 'Task', value: 'Task' },
-	{ label: 'Snippet', value: 'Snippet' },
-	{ label: 'Idea', value: 'Idea' },
+	{ label: 'Note', value: 'NOTE' },
+	{ label: 'Task', value: 'TASK' },
+	{ label: 'Snippet', value: 'SNIPPET' },
+	{ label: 'Idea', value: 'IDEA' },
 ];
+
+const TYPE_DISPLAY: Record<string, string> = {
+	NOTE: 'Note',
+	TASK: 'Task',
+	SNIPPET: 'Snippet',
+	IDEA: 'Idea',
+};
 
 interface BlocksClientProps {
 	initialBlocks: Block[];
@@ -24,15 +33,33 @@ interface BlocksClientProps {
 
 export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 	const [blocks, setBlocks] = React.useState<Block[]>(initialBlocks);
+	const [loading, setLoading] = React.useState(true);
+	const [error, setError] = React.useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = React.useState('');
 	const [typeFilter, setTypeFilter] = React.useState('');
 	const [tagFilter, setTagFilter] = React.useState('');
-	const [activeTab, setActiveTab] = React.useState<BlockStatus>('active');
+	const [activeTab, setActiveTab] = React.useState<BlockStatus>('ACTIVE');
 	const [createOpen, setCreateOpen] = React.useState(false);
 	const [selectedBlock, setSelectedBlock] = React.useState<Block | null>(null);
+	const [editingBlock, setEditingBlock] = React.useState<Block | null>(null);
+
+	React.useEffect(() => {
+		blocksApi
+			.getBlocks()
+			.then(data => {
+				setBlocks(data);
+				setError(null);
+			})
+			.catch((err: Error) => {
+				setError(err.message ?? 'Failed to load blocks.');
+			})
+			.finally(() => setLoading(false));
+	}, []);
 
 	const allTags = React.useMemo(() => {
-		const tags = getAllTags(blocks);
+		const tagSet = new Set<string>();
+		blocks.forEach(b => b.tags.forEach(t => tagSet.add(t)));
+		const tags = Array.from(tagSet).sort();
 		return [
 			{ label: 'All Tags', value: '' },
 			...tags.map(t => ({ label: t, value: t })),
@@ -54,42 +81,91 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 		});
 	}, [blocks, searchQuery, typeFilter, tagFilter, activeTab]);
 
-	function handleCreateBlock(
-		data: Omit<Block, 'id' | 'createdAt' | 'updatedAt' | 'status'>,
+	async function handleCreateBlock(
+		data: Omit<
+			Block,
+			'id' | 'createdAt' | 'updatedAt' | 'status' | 'userId' | 'archivedAt'
+		>,
 	) {
-		const newBlock: Block = {
-			...data,
-			id: `local-${Date.now()}`,
-			status: 'active',
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-		setBlocks(prev => [newBlock, ...prev]);
-		toast.success(`"${data.title}" created.`);
+		try {
+			const created = await blocksApi.createBlock(data);
+			setBlocks(prev => [created, ...prev]);
+			toast.success(`"${created.title}" created.`);
+		} catch (err: unknown) {
+			const msg =
+				err instanceof Error ? err.message : 'Failed to create block.';
+			toast.error(msg);
+			throw err; // keep dialog open
+		}
 	}
 
-	function handleArchive(id: string) {
-		setBlocks(prev =>
-			prev.map(b => {
-				if (b.id !== id) return b;
-				const next = b.status === 'active' ? 'archived' : 'active';
-				toast.success(
-					next === 'archived'
-						? `"${b.title}" archived.`
-						: `"${b.title}" restored.`,
-				);
-				return { ...b, status: next };
-			}),
-		);
+	async function handleArchive(id: string) {
+		const block = blocks.find(b => b.id === id);
+		if (!block) return;
+		const nextStatus: BlockStatus =
+			block.status === 'ACTIVE' ? 'ARCHIVED' : 'ACTIVE';
+		try {
+			const updated = await blocksApi.updateBlock(id, { status: nextStatus });
+			setBlocks(prev => prev.map(b => (b.id === id ? updated : b)));
+			toast.success(
+				nextStatus === 'ARCHIVED'
+					? `"${block.title}" archived.`
+					: `"${block.title}" restored.`,
+			);
+		} catch (err: unknown) {
+			const msg =
+				err instanceof Error ? err.message : 'Failed to update block.';
+			toast.error(msg);
+		}
 		setSelectedBlock(null);
 	}
 
-	const activeCount = blocks.filter(b => b.status === 'active').length;
-	const archivedCount = blocks.filter(b => b.status === 'archived').length;
+	function handleSaveEdit(updated: Block) {
+		setBlocks(prev => prev.map(b => (b.id === updated.id ? updated : b)));
+		setEditingBlock(null);
+	}
+
+	function handleDeleteBlock(id: string) {
+		setBlocks(prev => prev.filter(b => b.id !== id));
+		setSelectedBlock(null);
+	}
+
+	const activeCount = blocks.filter(b => b.status === 'ACTIVE').length;
+	const archivedCount = blocks.filter(b => b.status === 'ARCHIVED').length;
+
+	if (loading) {
+		return (
+			<main className='mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
+				<div className='mb-6 flex items-center justify-between'>
+					<h1 className='text-2xl font-bold tracking-tight text-foreground sm:text-3xl'>
+						Your Blocks
+					</h1>
+				</div>
+				<div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
+					{[1, 2, 3].map(i => (
+						<div
+							key={i}
+							className='h-40 animate-pulse rounded-xl border border-border bg-muted'
+						/>
+					))}
+				</div>
+			</main>
+		);
+	}
+
+	if (error) {
+		return (
+			<main className='mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
+				<div className='rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive'>
+					{error}
+				</div>
+			</main>
+		);
+	}
 
 	return (
 		<>
-			<main className='mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
+			<main className='mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8'>
 				{/* Page header */}
 				<div className='mb-6 flex items-center justify-between'>
 					<h1 className='text-2xl font-bold tracking-tight text-foreground sm:text-3xl'>
@@ -133,15 +209,15 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 				{/* Tabs */}
 				<div className='mb-6 flex items-center gap-1 rounded-lg bg-muted p-1 w-fit'>
 					<TabButton
-						active={activeTab === 'active'}
-						onClick={() => setActiveTab('active')}
+						active={activeTab === 'ACTIVE'}
+						onClick={() => setActiveTab('ACTIVE')}
 						count={activeCount}
 					>
 						Active
 					</TabButton>
 					<TabButton
-						active={activeTab === 'archived'}
-						onClick={() => setActiveTab('archived')}
+						active={activeTab === 'ARCHIVED'}
+						onClick={() => setActiveTab('ARCHIVED')}
 						count={archivedCount}
 					>
 						Archived
@@ -180,12 +256,23 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 				onSubmit={handleCreateBlock}
 			/>
 
+			{editingBlock && (
+				<EditBlockDialog
+					block={editingBlock}
+					open={true}
+					onClose={() => setEditingBlock(null)}
+					onSave={handleSaveEdit}
+				/>
+			)}
+
 			{/* Block detail sheet */}
 			{selectedBlock && (
 				<BlockDetailSheet
 					block={selectedBlock}
 					onClose={() => setSelectedBlock(null)}
 					onArchive={() => handleArchive(selectedBlock.id)}
+					onEdit={() => setEditingBlock(selectedBlock)}
+					onDelete={handleDeleteBlock}
 				/>
 			)}
 		</>
@@ -255,7 +342,7 @@ function EmptyState({
 						Clear filters
 					</Button>
 				</>
-			) : tab === 'archived' ? (
+			) : tab === 'ARCHIVED' ? (
 				<>
 					<h3 className='mb-1.5 text-sm font-medium text-foreground'>
 						No archived blocks
@@ -286,10 +373,14 @@ function BlockDetailSheet({
 	block,
 	onClose,
 	onArchive,
+	onEdit,
+	onDelete,
 }: {
 	block: Block;
 	onClose: () => void;
 	onArchive: () => void;
+	onEdit: () => void;
+	onDelete: (id: string) => void;
 }) {
 	React.useEffect(() => {
 		document.body.style.overflow = 'hidden';
@@ -318,10 +409,14 @@ function BlockDetailSheet({
 									TYPE_COLORS[block.type],
 								)}
 							>
-								{block.type}
+								{TYPE_DISPLAY[block.type] ?? block.type}
 							</span>
 							<span className='inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground capitalize'>
-								{block.status}
+								{block.status === 'ACTIVE'
+									? 'Active'
+									: block.status === 'ARCHIVED'
+										? 'Archived'
+										: block.status}
 							</span>
 						</div>
 						<h2 className='text-lg font-semibold text-foreground'>
@@ -351,7 +446,7 @@ function BlockDetailSheet({
 
 				{/* Content */}
 				<div className='flex-1 overflow-y-auto p-6'>
-					{block.type === 'Snippet' ? (
+					{block.type === 'SNIPPET' ? (
 						<pre className='rounded-lg bg-muted p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-all font-mono'>
 							{block.content}
 						</pre>
@@ -403,13 +498,18 @@ function BlockDetailSheet({
 				</div>
 
 				{/* Footer */}
-				<div className='border-t border-border p-4 flex gap-2'>
+				<div className='border-t border-border p-4 flex gap-2 flex-wrap'>
 					<Button variant='outline' className='flex-1' onClick={onArchive}>
-						{block.status === 'active' ? 'Archive' : 'Restore'}
+						{block.status === 'ACTIVE' ? 'Archive' : 'Restore'}
 					</Button>
-					<Button className='flex-1' onClick={onClose}>
-						Done
+					<Button variant='outline' className='flex-1' onClick={onEdit}>
+						Edit
 					</Button>
+					<DeleteBlockButton
+						blockId={block.id}
+						blockTitle={block.title}
+						onDeleted={() => onDelete(block.id)}
+					/>
 				</div>
 			</div>
 		</div>

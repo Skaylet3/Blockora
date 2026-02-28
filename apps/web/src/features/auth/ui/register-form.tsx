@@ -10,32 +10,45 @@ import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-export function LoginForm() {
+export function RegisterForm() {
 	const router = useRouter();
 	const [email, setEmail] = React.useState('');
 	const [password, setPassword] = React.useState('');
+	const [displayName, setDisplayName] = React.useState('');
 	const [loading, setLoading] = React.useState(false);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		if (!email || !password) {
-			toast.error('Please fill in all fields.');
+			toast.error('Please fill in all required fields.');
+			return;
+		}
+		if (password.length < 8) {
+			toast.error('Password must be at least 8 characters.');
 			return;
 		}
 		setLoading(true);
 		try {
-			const pair = await authApi.login({ email, password });
+			const pair = await authApi.register({
+				email,
+				password,
+				displayName: displayName.trim() || undefined,
+			});
 			setTokens(pair);
 			document.cookie = 'blockora-session=1; path=/; max-age=86400';
-			toast.success('Signed in. Welcome back!');
+			toast.success('Account created. Welcome!');
 			router.push('/');
 			router.refresh();
 		} catch (err: unknown) {
 			if (err instanceof ApiRequestError) {
-				const msg = Array.isArray(err.messages) ? err.messages.join(', ') : err.message;
-				toast.error(msg);
+				if (err.statusCode === 409) {
+					toast.error('An account with this email already exists.');
+				} else {
+					const msg = Array.isArray(err.messages) ? err.messages.join(', ') : err.message;
+					toast.error(msg);
+				}
 			} else {
-				toast.error('Failed to sign in. Please try again.');
+				toast.error('Failed to create account. Please try again.');
 			}
 		} finally {
 			setLoading(false);
@@ -79,22 +92,37 @@ export function LoginForm() {
 						<Input
 							id='password'
 							type='password'
-							placeholder='Enter your password'
+							placeholder='Min. 8 characters'
 							value={password}
 							onChange={e => setPassword(e.target.value)}
 							required
-							autoComplete='current-password'
+							autoComplete='new-password'
+						/>
+					</div>
+
+					<div className='space-y-1.5'>
+						<Label htmlFor='displayName'>
+							Display Name{' '}
+							<span className='text-muted-foreground'>(optional)</span>
+						</Label>
+						<Input
+							id='displayName'
+							type='text'
+							placeholder='Your name'
+							value={displayName}
+							onChange={e => setDisplayName(e.target.value)}
+							autoComplete='name'
 						/>
 					</div>
 
 					<Button type='submit' className='w-full' disabled={loading}>
-						{loading ? 'Signing in...' : 'Sign in'}
+						{loading ? 'Creating account...' : 'Create account'}
 					</Button>
 
 					<p className='text-center text-xs text-muted-foreground'>
-						Don&apos;t have an account?{' '}
-						<Link href='/register' className='underline hover:text-foreground'>
-							Sign up
+						Already have an account?{' '}
+						<Link href='/login' className='underline hover:text-foreground'>
+							Sign in
 						</Link>
 					</p>
 				</form>
