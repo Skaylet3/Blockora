@@ -1,5 +1,3 @@
-import type { BlockType } from "./types";
-
 const TAG_COLOR_MAP: Record<string, string> = {
   react: "bg-cyan-100 text-cyan-700",
   javascript: "bg-yellow-100 text-yellow-700",
@@ -47,9 +45,9 @@ export function getTagColor(tag: string): string {
   return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length]!;
 }
 
-export const TYPE_COLORS: Record<BlockType, string> = {
-  Note: "bg-zinc-100 text-zinc-700",
-  Task: "bg-amber-100 text-amber-700",
-  Snippet: "bg-violet-100 text-violet-700",
-  Idea: "bg-blue-100 text-blue-700",
+export const TYPE_COLORS: Record<string, string> = {
+  NOTE: "bg-zinc-100 text-zinc-700",
+  TASK: "bg-amber-100 text-amber-700",
+  SNIPPET: "bg-violet-100 text-violet-700",
+  IDEA: "bg-blue-100 text-blue-700",
 };

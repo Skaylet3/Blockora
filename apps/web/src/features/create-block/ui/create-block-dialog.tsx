@@ -17,18 +17,18 @@ import {
 import * as React from 'react';
 
 const TYPE_OPTIONS = [
-	{ label: 'Note', value: 'Note' },
-	{ label: 'Task', value: 'Task' },
-	{ label: 'Snippet', value: 'Snippet' },
-	{ label: 'Idea', value: 'Idea' },
+	{ label: 'Note', value: 'NOTE' },
+	{ label: 'Task', value: 'TASK' },
+	{ label: 'Snippet', value: 'SNIPPET' },
+	{ label: 'Idea', value: 'IDEA' },
 ];
 
 interface CreateBlockDialogProps {
 	open: boolean;
 	onClose: () => void;
 	onSubmit: (
-		block: Omit<Block, 'id' | 'createdAt' | 'updatedAt' | 'status'>,
-	) => void;
+		block: Omit<Block, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'userId' | 'archivedAt'>,
+	) => Promise<void> | void;
 }
 
 export function CreateBlockDialog({
@@ -38,14 +38,15 @@ export function CreateBlockDialog({
 }: CreateBlockDialogProps) {
 	const [title, setTitle] = React.useState('');
 	const [content, setContent] = React.useState('');
-	const [type, setType] = React.useState<BlockType>('Note');
+	const [type, setType] = React.useState<BlockType>('NOTE');
 	const [tagsInput, setTagsInput] = React.useState('');
 	const [errors, setErrors] = React.useState<{
 		title?: string;
 		content?: string;
 	}>({});
+	const [submitting, setSubmitting] = React.useState(false);
 
-	function handleSubmit(e: React.FormEvent) {
+	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		const newErrors: { title?: string; content?: string } = {};
 		if (!title.trim()) newErrors.title = 'Title is required.';
@@ -60,14 +61,27 @@ export function CreateBlockDialog({
 			.map(t => t.trim().toLowerCase())
 			.filter(Boolean);
 
-		onSubmit({ title: title.trim(), content: content.trim(), type, tags });
-		handleClose();
+		setSubmitting(true);
+		try {
+			await onSubmit({
+				title: title.trim(),
+				content: content.trim(),
+				type,
+				tags,
+				visibility: 'PRIVATE',
+			});
+			handleClose();
+		} catch {
+			// error already toasted in parent; keep dialog open
+		} finally {
+			setSubmitting(false);
+		}
 	}
 
 	function handleClose() {
 		setTitle('');
 		setContent('');
-		setType('Note');
+		setType('NOTE');
 		setTagsInput('');
 		setErrors({});
 		onClose();
@@ -145,10 +159,12 @@ export function CreateBlockDialog({
 					</div>
 
 					<DialogFooter>
-						<Button type='button' variant='outline' onClick={handleClose}>
+						<Button type='button' variant='outline' onClick={handleClose} disabled={submitting}>
 							Cancel
 						</Button>
-						<Button type='submit'>Create Block</Button>
+						<Button type='submit' disabled={submitting}>
+							{submitting ? 'Creating...' : 'Create Block'}
+						</Button>
 					</DialogFooter>
 				</form>
 			</DialogContent>

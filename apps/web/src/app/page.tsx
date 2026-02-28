@@ -1,5 +1,4 @@
 import { DashboardPage } from '@/pages-flat/dashboard';
-import { getMockBlocks } from '@/shared/lib/mock-data';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -10,8 +9,6 @@ export default async function Home() {
 	// Not logged in — send to login page
 	if (!session) redirect('/login');
 
-	// SSR: fetch blocks on the server, pass to client for hydration
-	const blocks = await getMockBlocks();
-
-	return <DashboardPage blocks={blocks} />;
+	// Blocks are fetched client-side in BlocksClient
+	return <DashboardPage blocks={[]} />;
 }

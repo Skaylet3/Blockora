@@ -8,7 +8,7 @@ export default async function Profile() {
 
 	if (!session) redirect('/login');
 
-	return (
-		<ProfilePage initialName='Demo User' initialEmail='skaylet2007@gmail.com' />
-	);
+	// Access token is stored in localStorage (client-only).
+	// Pass empty strings so the ProfilePage/ProfileForm fetches /auth/me client-side.
+	return <ProfilePage initialEmail='' initialUserId='' />;
 }

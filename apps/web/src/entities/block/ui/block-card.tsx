@@ -3,6 +3,13 @@
 import { cn, getTagColor, TYPE_COLORS } from '@/shared/lib';
 import type { Block } from '../model/types';
 
+const TYPE_DISPLAY: Record<string, string> = {
+	NOTE: 'Note',
+	TASK: 'Task',
+	SNIPPET: 'Snippet',
+	IDEA: 'Idea',
+};
+
 function formatDate(dateStr: string): string {
 	const date = new Date(dateStr);
 	return date.toLocaleDateString('en-US', {
@@ -18,7 +25,7 @@ interface BlockCardProps {
 }
 
 export function BlockCard({ block, onClick }: BlockCardProps) {
-	const isSnippet = block.type === 'Snippet';
+	const isSnippet = block.type === 'SNIPPET';
 
 	return (
 		<article
@@ -51,7 +58,7 @@ export function BlockCard({ block, onClick }: BlockCardProps) {
 						TYPE_COLORS[block.type],
 					)}
 				>
-					{block.type}
+					{TYPE_DISPLAY[block.type] ?? block.type}
 				</span>
 				{block.tags.map(tag => (
 					<span

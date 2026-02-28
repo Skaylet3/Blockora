@@ -1,29 +1,45 @@
 'use client';
 
+import { authApi } from '@/shared/api/auth.api';
 import { Button, Input, Label } from '@/shared/ui';
 import * as React from 'react';
 import { toast } from 'sonner';
 
 interface ProfileFormProps {
-	initialName: string;
 	initialEmail: string;
+	initialUserId: string;
 }
 
-export function ProfileForm({ initialName, initialEmail }: ProfileFormProps) {
-	const [name, setName] = React.useState(initialName);
+export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
 	const [email, setEmail] = React.useState(initialEmail);
-	const [saved, setSaved] = React.useState(false);
+	const [userId, setUserId] = React.useState(initialUserId);
+	const [loading, setLoading] = React.useState(!initialEmail);
+
+	React.useEffect(() => {
+		// If the server couldn't populate props (token is in localStorage, not available SSR),
+		// fetch /auth/me client-side after hydration.
+		if (!initialEmail) {
+			authApi
+				.getMe()
+				.then(user => {
+					setEmail(user.email);
+					setUserId(user.userId);
+				})
+				.catch(() => {
+					// silently fail; empty fields shown
+				})
+				.finally(() => setLoading(false));
+		} else {
+			setLoading(false);
+		}
+	}, [initialEmail]);
 
 	function handleSave(e: React.FormEvent) {
 		e.preventDefault();
-		setSaved(true);
-		setTimeout(() => setSaved(false), 2000);
-		toast.success('Profile updated successfully.');
+		toast.info('Profile editing coming soon.');
 	}
 
 	function handleCancel() {
-		setName(initialName);
-		setEmail(initialEmail);
 		toast.info('Changes discarded.');
 	}
 
@@ -38,28 +54,18 @@ export function ProfileForm({ initialName, initialEmail }: ProfileFormProps) {
 
 					<form onSubmit={handleSave} className='space-y-4'>
 						<div className='space-y-1.5'>
-							<Label htmlFor='name'>Name</Label>
-							<Input
-								id='name'
-								value={name}
-								onChange={e => setName(e.target.value)}
-								placeholder='Your name'
-							/>
-						</div>
-
-						<div className='space-y-1.5'>
 							<Label htmlFor='email'>Email</Label>
 							<Input
 								id='email'
 								type='email'
-								value={email}
-								onChange={e => setEmail(e.target.value)}
-								placeholder='Your email'
+								value={loading ? '' : email}
+								disabled
+								placeholder={loading ? 'Loading...' : 'Your email'}
 							/>
 						</div>
 
 						<div className='flex gap-2 pt-1'>
-							<Button type='submit'>{saved ? 'Saved!' : 'Save Changes'}</Button>
+							<Button type='submit'>Save Changes</Button>
 							<Button type='button' variant='outline' onClick={handleCancel}>
 								Cancel
 							</Button>
@@ -77,14 +83,16 @@ export function ProfileForm({ initialName, initialEmail }: ProfileFormProps) {
 					<div className='space-y-3'>
 						<div className='flex items-center justify-between'>
 							<span className='text-sm text-muted-foreground'>User ID</span>
-							<span className='text-sm font-medium text-amber-600'>1</span>
+							<span className='text-sm font-medium text-amber-600'>
+								{loading ? '...' : (userId || '—')}
+							</span>
 						</div>
 						<div className='flex items-center justify-between'>
 							<span className='text-sm text-muted-foreground'>
 								Account Type
 							</span>
 							<span className='text-sm font-medium text-amber-600'>
-								Demo Account
+								Standard
 							</span>
 						</div>
 						<div className='flex items-center justify-between'>

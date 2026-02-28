@@ -7,6 +7,12 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
+// Pointer capture APIs are not implemented in jsdom — required by Radix UI Select/Popover
+Element.prototype.hasPointerCapture = () => false;
+Element.prototype.setPointerCapture = () => {};
+Element.prototype.releasePointerCapture = () => {};
+Element.prototype.scrollIntoView = () => {};
+
 // matchMedia is not implemented in jsdom
 Object.defineProperty(window, "matchMedia", {
   writable: true,
