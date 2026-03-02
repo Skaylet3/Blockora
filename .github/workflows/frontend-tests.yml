@@ -1,0 +1,45 @@
+name: Frontend Tests
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/ui/**"
+      - ".github/workflows/frontend-tests.yml"
+      - "package.json"
+      - "yarn.lock"
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/ui/**"
+      - ".github/workflows/frontend-tests.yml"
+      - "package.json"
+      - "yarn.lock"
+
+jobs:
+  web-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install deps
+        run: yarn install --frozen-lockfile
+
+      - name: Run web lint
+        run: yarn --cwd apps/web lint
+
+      - name: Run web unit tests
+        run: yarn --cwd apps/web test
+
+      - name: Run web build
+        run: yarn --cwd apps/web build
