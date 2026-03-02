@@ -102,7 +102,7 @@ export function RegisterForm() {
 
 					<div className='space-y-1.5'>
 						<Label htmlFor='displayName'>
-							Display Name{' '}
+							Name{' '}
 							<span className='text-muted-foreground'>(optional)</span>
 						</Label>
 						<Input

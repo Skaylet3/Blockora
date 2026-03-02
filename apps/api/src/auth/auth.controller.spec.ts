@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 
 const mockAuthService = {
   register: vi.fn(),
@@ -10,16 +11,24 @@ const mockAuthService = {
   logout: vi.fn(),
 };
 
+const mockUsersService = {
+  getProfile: vi.fn(),
+};
+
 describe('AuthController', () => {
   let controller: AuthController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: mockAuthService }],
+      providers: [
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: UsersService, useValue: mockUsersService },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
+    vi.clearAllMocks();
   });
 
   describe('register', () => {
@@ -73,12 +82,15 @@ describe('AuthController', () => {
   });
 
   describe('me', () => {
-    it('should return userId and email from the JWT payload', () => {
+    it('should delegate to usersService.getProfile and return profile', async () => {
+      const profile = { userId: 'user-1', email: 'a@b.com', displayName: null };
+      mockUsersService.getProfile.mockResolvedValue(profile);
       const user = { sub: 'user-1', email: 'a@b.com' };
 
-      const result = controller.me(user);
+      const result = await controller.me(user);
 
-      expect(result).toEqual({ userId: 'user-1', email: 'a@b.com' });
+      expect(mockUsersService.getProfile).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual(profile);
     });
   });
 });
