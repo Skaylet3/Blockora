@@ -8,9 +8,9 @@ interface DashboardPageProps {
 
 export function DashboardPage({ blocks }: DashboardPageProps) {
 	return (
-		<div className='flex min-h-screen flex-col bg-background'>
+		<section className='flex min-h-screen flex-col bg-background'>
 			<Navbar />
 			<BlocksClient initialBlocks={blocks} />
-		</div>
+		</section>
 	);
 }
