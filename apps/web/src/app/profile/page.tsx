@@ -10,5 +10,5 @@ export default async function Profile() {
 
 	// Access token is stored in localStorage (client-only).
 	// Pass empty strings so the ProfilePage/ProfileForm fetches /auth/me client-side.
-	return <ProfilePage initialEmail='' initialUserId='' />;
+	return <ProfilePage initialEmail='' initialUserId='' initialDisplayName='' />;
 }

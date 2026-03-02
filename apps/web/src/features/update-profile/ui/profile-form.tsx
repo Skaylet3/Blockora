@@ -1,6 +1,7 @@
 'use client';
 
 import { authApi } from '@/shared/api/auth.api';
+import type { ApiRequestError } from '@/shared/api/http-client';
 import { Button, Input, Label } from '@/shared/ui';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -8,12 +9,16 @@ import { toast } from 'sonner';
 interface ProfileFormProps {
 	initialEmail: string;
 	initialUserId: string;
+	initialDisplayName: string;
 }
 
-export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
+export function ProfileForm({ initialEmail, initialUserId, initialDisplayName }: ProfileFormProps) {
 	const [email, setEmail] = React.useState(initialEmail);
 	const [userId, setUserId] = React.useState(initialUserId);
+	const [displayName, setDisplayName] = React.useState(initialDisplayName);
+	const [savedDisplayName, setSavedDisplayName] = React.useState(initialDisplayName);
 	const [loading, setLoading] = React.useState(!initialEmail);
+	const [saving, setSaving] = React.useState(false);
 
 	React.useEffect(() => {
 		// If the server couldn't populate props (token is in localStorage, not available SSR),
@@ -24,6 +29,9 @@ export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
 				.then(user => {
 					setEmail(user.email);
 					setUserId(user.userId);
+					const name = user.displayName ?? '';
+					setDisplayName(name);
+					setSavedDisplayName(name);
 				})
 				.catch(() => {
 					// silently fail; empty fields shown
@@ -34,12 +42,27 @@ export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
 		}
 	}, [initialEmail]);
 
-	function handleSave(e: React.FormEvent) {
+	async function handleSave(e: React.FormEvent) {
 		e.preventDefault();
-		toast.info('Profile editing coming soon.');
+		setSaving(true);
+		try {
+			const updated = await authApi.updateProfile({
+				displayName: displayName.trim() || undefined,
+			});
+			const name = updated.displayName ?? '';
+			setDisplayName(name);
+			setSavedDisplayName(name);
+			toast.success('Profile saved.');
+		} catch (err) {
+			const apiErr = err as ApiRequestError;
+			toast.error(apiErr?.messages?.[0] ?? 'Failed to save profile.');
+		} finally {
+			setSaving(false);
+		}
 	}
 
 	function handleCancel() {
+		setDisplayName(savedDisplayName);
 		toast.info('Changes discarded.');
 	}
 
@@ -54,6 +77,18 @@ export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
 
 					<form onSubmit={handleSave} className='space-y-4'>
 						<div className='space-y-1.5'>
+							<Label htmlFor='displayName'>Name</Label>
+							<Input
+								id='displayName'
+								type='text'
+								value={loading ? '' : displayName}
+								onChange={e => setDisplayName(e.target.value)}
+								placeholder={loading ? 'Loading...' : 'Your name'}
+								disabled={loading || saving}
+							/>
+						</div>
+
+						<div className='space-y-1.5'>
 							<Label htmlFor='email'>Email</Label>
 							<Input
 								id='email'
@@ -65,8 +100,10 @@ export function ProfileForm({ initialEmail, initialUserId }: ProfileFormProps) {
 						</div>
 
 						<div className='flex gap-2 pt-1'>
-							<Button type='submit'>Save Changes</Button>
-							<Button type='button' variant='outline' onClick={handleCancel}>
+							<Button type='submit' disabled={loading || saving}>
+								{saving ? 'Saving...' : 'Save Changes'}
+							</Button>
+							<Button type='button' variant='outline' onClick={handleCancel} disabled={saving}>
 								Cancel
 							</Button>
 						</div>

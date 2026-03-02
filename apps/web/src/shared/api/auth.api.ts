@@ -8,6 +8,11 @@ export interface TokenPair {
 export interface User {
 	userId: string;
 	email: string;
+	displayName?: string | null;
+}
+
+export interface UpdateProfileBody {
+	displayName?: string;
 }
 
 export interface RegisterBody {
@@ -44,5 +49,9 @@ export const authApi = {
 
 	getMe(): Promise<User> {
 		return request<User>('/auth/me');
+	},
+
+	updateProfile(body: UpdateProfileBody): Promise<User> {
+		return request<User>('/users/me', { method: 'PATCH', body });
 	},
 };

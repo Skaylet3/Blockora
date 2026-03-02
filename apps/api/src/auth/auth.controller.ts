@@ -7,6 +7,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -19,7 +20,10 @@ import type { JwtPayload } from './types/jwt-payload.type';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -87,11 +91,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the currently authenticated user identity' })
   @ApiResponse({
     status: 200,
-    description: 'Returns userId and email of the authenticated user',
+    description:
+      'Returns userId, email, and displayName of the authenticated user',
     type: MeResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  me(@CurrentUser() user: JwtPayload): MeResponseDto {
-    return { userId: user.sub, email: user.email };
+  async me(@CurrentUser() user: JwtPayload): Promise<MeResponseDto> {
+    return this.usersService.getProfile(user.sub);
   }
 }
