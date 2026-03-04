@@ -48,6 +48,8 @@ model User {
 
   blocks        Block[]
   refreshTokens RefreshToken[]
+  storages      Storage[]      @relation("UserStorages")
+  notes         Note[]         @relation("UserNotes")
 
   @@map("users")
 }
@@ -93,4 +95,41 @@ model RefreshToken {
   @@index([userId])
 
   @@map("refresh_tokens")
+}
+
+model Storage {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  userId    String    @db.Uuid
+  parentId  String?   @db.Uuid
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User      @relation("UserStorages", fields: [userId], references: [id], onDelete: Cascade)
+  parent   Storage?  @relation("StorageChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children Storage[] @relation("StorageChildren")
+  notes    Note[]
+
+  @@index([userId])
+  @@index([userId, parentId])
+
+  @@map("storages")
+}
+
+model Note {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  content   String   @default("")
+  userId    String   @db.Uuid
+  storageId String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation("UserNotes", fields: [userId], references: [id], onDelete: Cascade)
+  storage Storage @relation(fields: [storageId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([storageId])
+
+  @@map("notes")
 }

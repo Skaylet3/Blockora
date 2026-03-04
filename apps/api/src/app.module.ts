@@ -8,9 +8,19 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from './config/config.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { StorageModule } from './storage/storage.module';
+import { NoteModule } from './note/note.module';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule, BlockModule, UsersModule],
+  imports: [
+    ConfigModule,
+    PrismaModule,
+    AuthModule,
+    BlockModule,
+    UsersModule,
+    StorageModule,
+    NoteModule,
+  ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

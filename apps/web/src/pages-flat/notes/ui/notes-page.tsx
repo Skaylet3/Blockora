@@ -1,5 +1,7 @@
 'use client';
 
+import { type NoteResponse, notesApi } from '@/shared/api/notes.api';
+import { storagesApi } from '@/shared/api/storages.api';
 import { cn } from '@/shared/lib';
 import { Navbar } from '@/widgets/navbar';
 import {
@@ -16,6 +18,7 @@ import {
 	Trash,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 interface DraggableFABProps {
 	onClick: () => void;
@@ -156,8 +159,6 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 	);
 }
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
-
 type Storage = {
 	id: string;
 	name: string;
@@ -165,23 +166,14 @@ type Storage = {
 	expanded: boolean;
 };
 
-type Note = {
-	id: string;
-	title: string;
-	content: string;
-	storageId: string;
-};
-
-const initialStorages: Storage[] = [
-	{ id: '1', name: 'Storage Level 1', parentId: null, expanded: true },
-	{ id: '2', name: 'Storage Level 2', parentId: '1', expanded: false },
-];
-
-const initialNotes: Note[] = [];
-
 export function NotesPage() {
-	const [storages, setStorages] = useState<Storage[]>(initialStorages);
-	const [notes, setNotes] = useState<Note[]>(initialNotes);
+	const [storages, setStorages] = useState<Storage[]>([]);
+	const [notesCache, setNotesCache] = useState<Map<string, NoteResponse[]>>(
+		() => new Map(),
+	);
+	const [loadingStorages, setLoadingStorages] = useState(true);
+	const [storagesError, setStoragesError] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
 
 	const [selectedStorageId, setSelectedStorageId] = useState<string | null>(
 		null,
@@ -196,6 +188,25 @@ export function NotesPage() {
 	>(undefined);
 	const [newStorageName, setNewStorageName] = useState('');
 
+	const loadStorages = useCallback(() => {
+		setLoadingStorages(true);
+		setStoragesError(null);
+		storagesApi
+			.getStorages()
+			.then(data => {
+				setStorages(data.map(s => ({ ...s, expanded: false })));
+				setLoadingStorages(false);
+			})
+			.catch((err: Error) => {
+				setStoragesError(err.message ?? 'Failed to load storages.');
+				setLoadingStorages(false);
+			});
+	}, []);
+
+	useEffect(() => {
+		loadStorages();
+	}, [loadStorages]);
+
 	const handleAddStorage = (parentId: string | null, e?: React.MouseEvent) => {
 		e?.stopPropagation();
 		setCreatingStorageParentId(parentId);
@@ -207,20 +218,24 @@ export function NotesPage() {
 		}
 	};
 
-	const confirmAddStorage = () => {
+	const confirmAddStorage = async () => {
 		if (!newStorageName.trim()) return;
 		const parentId = creatingStorageParentId ?? null;
-		const newStorage = {
-			id: generateId(),
-			name: newStorageName,
-			parentId,
-			expanded: false,
-		};
-		setStorages([...storages, newStorage]);
-		if (parentId) {
-			setStorages(prev =>
-				prev.map(s => (s.id === parentId ? { ...s, expanded: true } : s)),
-			);
+		try {
+			const created = await storagesApi.createStorage({
+				name: newStorageName.trim(),
+				parentId: parentId ?? undefined,
+			});
+			setStorages(prev => [...prev, { ...created, expanded: false }]);
+			if (parentId) {
+				setStorages(prev =>
+					prev.map(s => (s.id === parentId ? { ...s, expanded: true } : s)),
+				);
+			}
+		} catch (err: unknown) {
+			const message =
+				err instanceof Error ? err.message : 'Failed to create storage.';
+			toast.error(message);
 		}
 		setCreatingStorageParentId(undefined);
 		setNewStorageName('');
@@ -231,7 +246,7 @@ export function NotesPage() {
 		setNewStorageName('');
 	};
 
-	const handleDeleteStorage = (id: string, e?: React.MouseEvent) => {
+	const handleDeleteStorage = async (id: string, e?: React.MouseEvent) => {
 		e?.stopPropagation();
 		const getChildrenIds = (parentId: string): string[] => {
 			const children = storages.filter(s => s.parentId === parentId);
@@ -241,14 +256,23 @@ export function NotesPage() {
 			];
 		};
 		const idsToDelete = [id, ...getChildrenIds(id)];
-
-		setStorages(prev => prev.filter(s => !idsToDelete.includes(s.id)));
-		setNotes(prev => prev.filter(n => !idsToDelete.includes(n.storageId)));
-
-		if (selectedStorageId && idsToDelete.includes(selectedStorageId)) {
-			setSelectedStorageId(null);
-			setIsCreatingNote(false);
-			setSelectedNoteId(null);
+		try {
+			await storagesApi.deleteStorage(id);
+			setStorages(prev => prev.filter(s => !idsToDelete.includes(s.id)));
+			setNotesCache(prev => {
+				const next = new Map(prev);
+				idsToDelete.forEach(sid => next.delete(sid));
+				return next;
+			});
+			if (selectedStorageId && idsToDelete.includes(selectedStorageId)) {
+				setSelectedStorageId(null);
+				setIsCreatingNote(false);
+				setSelectedNoteId(null);
+			}
+		} catch (err: unknown) {
+			const message =
+				err instanceof Error ? err.message : 'Failed to delete storage.';
+			toast.error(message);
 		}
 	};
 
@@ -259,10 +283,20 @@ export function NotesPage() {
 		);
 	};
 
-	const openStorage = (id: string) => {
+	const openStorage = async (id: string) => {
 		setSelectedStorageId(id);
 		setSelectedNoteId(null);
 		setIsCreatingNote(false);
+		if (!notesCache.has(id)) {
+			try {
+				const data = await notesApi.getNotesByStorage(id);
+				setNotesCache(prev => new Map(prev).set(id, data));
+			} catch (err: unknown) {
+				const message =
+					err instanceof Error ? err.message : 'Failed to load notes.';
+				toast.error(message);
+			}
+		}
 	};
 
 	const handleCreateNote = () => {
@@ -272,29 +306,63 @@ export function NotesPage() {
 		setDraftNote({ title: '', content: '' });
 	};
 
-	const handleOpenNote = (noteId: string) => {
-		const note = notes.find(n => n.id === noteId);
+	const handleOpenNote = (noteId: string, storageId: string) => {
+		const note = notesCache.get(storageId)?.find(n => n.id === noteId);
 		if (!note) return;
+		setSelectedStorageId(storageId);
 		setSelectedNoteId(noteId);
 		setIsCreatingNote(false);
 		setDraftNote({ title: note.title, content: note.content });
 	};
 
-	const handleSaveNote = () => {
+	const handleSaveNote = async () => {
 		if (selectedNoteId) {
-			setNotes(prev =>
-				prev.map(n => (n.id === selectedNoteId ? { ...n, ...draftNote } : n)),
-			);
+			setSaving(true);
+			try {
+				const updated = await notesApi.updateNote(selectedNoteId, {
+					title: draftNote.title,
+					content: draftNote.content,
+				});
+				setNotesCache(prev => {
+					const next = new Map(prev);
+					const existing = next.get(updated.storageId) ?? [];
+					next.set(
+						updated.storageId,
+						existing.map(n => (n.id === selectedNoteId ? updated : n)),
+					);
+					return next;
+				});
+			} catch (err: unknown) {
+				const message =
+					err instanceof Error ? err.message : 'Failed to save note.';
+				toast.error(message);
+			} finally {
+				setSaving(false);
+			}
 		} else if (isCreatingNote && selectedStorageId) {
-			const newNote = {
-				id: generateId(),
-				storageId: selectedStorageId,
-				...draftNote,
-			};
-			setNotes([...notes, newNote]);
-			setSelectedNoteId(newNote.id);
+			setSaving(true);
+			try {
+				const created = await notesApi.createNote({
+					title: draftNote.title,
+					content: draftNote.content,
+					storageId: selectedStorageId,
+				});
+				setNotesCache(prev => {
+					const next = new Map(prev);
+					const existing = next.get(selectedStorageId) ?? [];
+					next.set(selectedStorageId, [...existing, created]);
+					return next;
+				});
+				setSelectedNoteId(created.id);
+				setIsCreatingNote(false);
+			} catch (err: unknown) {
+				const message =
+					err instanceof Error ? err.message : 'Failed to create note.';
+				toast.error(message);
+			} finally {
+				setSaving(false);
+			}
 		}
-		setIsCreatingNote(false);
 	};
 
 	const handleCancelNote = () => {
@@ -304,11 +372,35 @@ export function NotesPage() {
 		}
 	};
 
-	const handleDeleteNote = (id: string, e: React.MouseEvent) => {
+	const handleDeleteNote = async (id: string, e: React.MouseEvent) => {
 		e.stopPropagation();
-		setNotes(prev => prev.filter(n => n.id !== id));
-		if (selectedNoteId === id) {
-			setSelectedNoteId(null);
+		let storageId: string | undefined;
+		for (const [sid, notes] of notesCache.entries()) {
+			if (notes.some(n => n.id === id)) {
+				storageId = sid;
+				break;
+			}
+		}
+		try {
+			await notesApi.deleteNote(id);
+			if (storageId) {
+				setNotesCache(prev => {
+					const next = new Map(prev);
+					const existing = next.get(storageId!) ?? [];
+					next.set(
+						storageId!,
+						existing.filter(n => n.id !== id),
+					);
+					return next;
+				});
+			}
+			if (selectedNoteId === id) {
+				setSelectedNoteId(null);
+			}
+		} catch (err: unknown) {
+			const message =
+				err instanceof Error ? err.message : 'Failed to delete note.';
+			toast.error(message);
 		}
 	};
 
@@ -326,7 +418,7 @@ export function NotesPage() {
 		const nodes = storages.filter(s => s.parentId === parentId);
 		const renderedNodes = nodes.map(storage => {
 			const hasChildren = storages.some(s => s.parentId === storage.id);
-			const storageNotes = notes.filter(n => n.storageId === storage.id);
+			const storageNotes = notesCache.get(storage.id) ?? [];
 			const isExpandable = hasChildren || storageNotes.length > 0;
 			const isSelected = selectedStorageId === storage.id;
 			const noteCount = storageNotes.length;
@@ -407,7 +499,7 @@ export function NotesPage() {
 									<div
 										onClick={e => {
 											e.stopPropagation();
-											handleOpenNote(note.id);
+											handleOpenNote(note.id, storage.id);
 										}}
 										className={cn(
 											'group flex items-center justify-between py-1.5 px-2 pr-3 rounded-md cursor-pointer text-sm w-[240px] shrink-0',
@@ -490,7 +582,9 @@ export function NotesPage() {
 
 	const renderMainContent = () => {
 		if (isCreatingNote || selectedNoteId) {
-			const activeNote = notes.find(n => n.id === selectedNoteId);
+			const activeNote = selectedStorageId
+				? notesCache.get(selectedStorageId)?.find(n => n.id === selectedNoteId)
+				: undefined;
 			const activeStorageId = activeNote?.storageId || selectedStorageId;
 			const activeStorageName =
 				storages.find(s => s.id === activeStorageId)?.name || '';
@@ -521,10 +615,10 @@ export function NotesPage() {
 							</button>
 							<button
 								onClick={handleSaveNote}
-								disabled={!draftNote.title.trim()}
+								disabled={!draftNote.title.trim() || saving}
 								className='px-4 py-1.5 text-sm font-medium bg-[#0A0B14] text-white hover:bg-black rounded-md transition-colors disabled:opacity-50 disabled:pointer-events-none'
 							>
-								Save
+								{saving ? 'Saving...' : 'Save'}
 							</button>
 						</div>
 					</div>
@@ -630,7 +724,31 @@ export function NotesPage() {
 						</div>
 					</div>
 					<div className='flex-1 overflow-auto p-2 flex flex-col items-center md:items-stretch'>
-						<div className='min-w-max pr-2'>{renderStorageNodes(null)}</div>
+						{loadingStorages ? (
+							<div
+								data-testid='storages-loading'
+								className='space-y-2 p-2 w-full'
+							>
+								{[0, 1, 2].map(i => (
+									<div
+										key={i}
+										className='h-8 rounded-md bg-muted animate-pulse'
+									/>
+								))}
+							</div>
+						) : storagesError ? (
+							<div className='p-4 text-sm text-destructive'>
+								<p>{storagesError}</p>
+								<button
+									onClick={loadStorages}
+									className='mt-2 text-xs underline text-muted-foreground hover:text-foreground'
+								>
+									Retry
+								</button>
+							</div>
+						) : (
+							<div className='min-w-max pr-2'>{renderStorageNodes(null)}</div>
+						)}
 					</div>
 				</div>
 				<div
