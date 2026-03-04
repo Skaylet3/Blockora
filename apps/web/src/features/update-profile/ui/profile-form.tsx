@@ -3,6 +3,8 @@
 import { authApi } from '@/shared/api/auth.api';
 import type { ApiRequestError } from '@/shared/api/http-client';
 import { Button, Input, Label } from '@/shared/ui';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -12,11 +14,16 @@ interface ProfileFormProps {
 	initialDisplayName: string;
 }
 
-export function ProfileForm({ initialEmail, initialUserId, initialDisplayName }: ProfileFormProps) {
+export function ProfileForm({
+	initialEmail,
+	initialUserId,
+	initialDisplayName,
+}: ProfileFormProps) {
 	const [email, setEmail] = React.useState(initialEmail);
 	const [userId, setUserId] = React.useState(initialUserId);
 	const [displayName, setDisplayName] = React.useState(initialDisplayName);
-	const [savedDisplayName, setSavedDisplayName] = React.useState(initialDisplayName);
+	const [savedDisplayName, setSavedDisplayName] =
+		React.useState(initialDisplayName);
 	const [loading, setLoading] = React.useState(!initialEmail);
 	const [saving, setSaving] = React.useState(false);
 
@@ -71,9 +78,18 @@ export function ProfileForm({ initialEmail, initialUserId, initialDisplayName }:
 			<div className='mx-auto max-w-lg'>
 				<div className='rounded-xl border border-border bg-card p-6 shadow-sm'>
 					{/* Profile Settings */}
-					<h1 className='mb-5 text-xl font-semibold text-foreground'>
-						Profile Settings
-					</h1>
+					<div className='mb-5 flex items-center gap-3'>
+						<Link
+							href='/'
+							className='hover:bg-accent hover:text-foreground text-muted-foreground transition-colors rounded-md p-1 -ml-1 flex items-center justify-center'
+							aria-label='Back to dashboard'
+						>
+							<ArrowLeft className='h-5 w-5' />
+						</Link>
+						<h1 className='text-xl font-semibold text-foreground m-0 leading-none'>
+							Profile Settings
+						</h1>
+					</div>
 
 					<form onSubmit={handleSave} className='space-y-4'>
 						<div className='space-y-1.5'>
@@ -103,7 +119,12 @@ export function ProfileForm({ initialEmail, initialUserId, initialDisplayName }:
 							<Button type='submit' disabled={loading || saving}>
 								{saving ? 'Saving...' : 'Save Changes'}
 							</Button>
-							<Button type='button' variant='outline' onClick={handleCancel} disabled={saving}>
+							<Button
+								type='button'
+								variant='outline'
+								onClick={handleCancel}
+								disabled={saving}
+							>
 								Cancel
 							</Button>
 						</div>
@@ -121,7 +142,7 @@ export function ProfileForm({ initialEmail, initialUserId, initialDisplayName }:
 						<div className='flex items-center justify-between'>
 							<span className='text-sm text-muted-foreground'>User ID</span>
 							<span className='text-sm font-medium text-amber-600'>
-								{loading ? '...' : (userId || '—')}
+								{loading ? '...' : userId || '—'}
 							</span>
 						</div>
 						<div className='flex items-center justify-between'>
