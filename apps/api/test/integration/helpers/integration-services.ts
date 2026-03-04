@@ -43,7 +43,9 @@ export async function closeIntegrationServices(
 
 export async function cleanDatabase(prisma: PrismaService) {
   await prisma.db.refreshToken.deleteMany();
+  await prisma.db.note.deleteMany();
   await prisma.db.block.deleteMany();
+  await prisma.db.storage.deleteMany();
   await prisma.db.user.deleteMany();
 }
 
