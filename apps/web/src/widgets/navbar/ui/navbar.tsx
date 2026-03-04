@@ -1,23 +1,25 @@
 import { LogoutButton } from '@/features/auth';
 import { SquareDashed, User } from 'lucide-react';
 import Link from 'next/link';
+import { NavDropdown } from './nav-dropdown';
 
 export function Navbar() {
 	return (
-		<header className='sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm'>
-			<div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+		<header className='sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur-sm'>
+			<div className='w-full px-4'>
 				<div className='flex h-14 items-center justify-between'>
-					<div className='flex items-center gap-2'>
+					<Link
+						href='/'
+						className='flex items-center gap-2 hover:opacity-80 transition-opacity'
+					>
 						<SquareDashed className='h-5 w-5 text-foreground' strokeWidth={2} />
-						<span className='text-base font-semibold tracking-tight text-foreground'>
+						<span className='hidden sm:inline-block text-base font-semibold tracking-tight text-foreground'>
 							Blockora
 						</span>
-					</div>
+					</Link>
 
 					<div className='flex items-center gap-3'>
-						<span className='hidden text-sm text-muted-foreground sm:block'>
-							skaylet2007@gmail.com
-						</span>
+						<NavDropdown />
 						<Link
 							href='/profile'
 							className='rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'

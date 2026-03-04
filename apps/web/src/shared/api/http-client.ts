@@ -1,4 +1,9 @@
-import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/shared/lib/token-storage';
+import {
+	clearTokens,
+	getAccessToken,
+	getRefreshToken,
+	setTokens,
+} from '@/shared/lib/token-storage';
 
 export interface ApiError {
 	statusCode: number;
@@ -29,10 +34,13 @@ export interface RequestOptions {
 }
 
 function getBaseUrl(): string {
-	return process.env.NEXT_PUBLIC_API_BASE_URL ?? 'https://blockora-api.vercel.app/api';
+	return (
+		process.env.NEXT_PUBLIC_API_BASE_URL ??
+		'https://blockora-api.vercel.app/api'
+	);
 }
 
-let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
 
 async function doRefresh(): Promise<boolean> {
 	const refreshToken = getRefreshToken();
@@ -44,7 +52,10 @@ async function doRefresh(): Promise<boolean> {
 			body: JSON.stringify({ refreshToken }),
 		});
 		if (!res.ok) return false;
-		const pair = await res.json() as { accessToken: string; refreshToken: string };
+		const pair = (await res.json()) as {
+			accessToken: string;
+			refreshToken: string;
+		};
 		setTokens(pair);
 		return true;
 	} catch {
@@ -52,7 +63,10 @@ async function doRefresh(): Promise<boolean> {
 	}
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(
+	path: string,
+	options: RequestOptions = {},
+): Promise<T> {
 	const { method = 'GET', body, skipAuth = false } = options;
 
 	const headers: Record<string, string> = {
@@ -79,33 +93,46 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 	let res = await fetch(url, fetchOptions);
 
 	// On 401, attempt a token refresh once and retry
-	if (res.status === 401 && !skipAuth && !isRefreshing) {
-		isRefreshing = true;
-		const refreshed = await doRefresh();
-		isRefreshing = false;
+	if (res.status === 401 && !skipAuth) {
+		let refreshed = false;
+		if (!refreshPromise) {
+			refreshPromise = doRefresh().finally(() => {
+				refreshPromise = null;
+			});
+		}
+		refreshed = await refreshPromise;
 
 		if (refreshed) {
 			// Retry with the new access token
 			const newToken = getAccessToken();
+			const retryHeaders = { ...headers };
 			if (newToken) {
-				headers['Authorization'] = `Bearer ${newToken}`;
+				retryHeaders['Authorization'] = `Bearer ${newToken}`;
 			}
-			res = await fetch(url, { ...fetchOptions, headers });
+			res = await fetch(url, { ...fetchOptions, headers: retryHeaders });
 		} else {
 			// Refresh failed — clear tokens and redirect to login
 			clearTokens();
 			document.cookie = 'blockora-session=; path=/; max-age=0';
 			window.location.href = '/login';
-			throw new ApiRequestError({ statusCode: 401, message: 'Session expired', error: 'Unauthorized' });
+			throw new ApiRequestError({
+				statusCode: 401,
+				message: 'Session expired',
+				error: 'Unauthorized',
+			});
 		}
 	}
 
 	if (!res.ok) {
 		let errorBody: ApiError;
 		try {
-			errorBody = await res.json() as ApiError;
+			errorBody = (await res.json()) as ApiError;
 		} catch {
-			errorBody = { statusCode: res.status, message: res.statusText, error: 'Error' };
+			errorBody = {
+				statusCode: res.status,
+				message: res.statusText,
+				error: 'Error',
+			};
 		}
 		throw new ApiRequestError(errorBody);
 	}
