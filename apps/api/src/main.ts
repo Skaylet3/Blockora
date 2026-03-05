@@ -61,6 +61,7 @@ async function bootstrap() {
     )
     .addTag('auth', 'Registration, login, token refresh, and logout')
     .addTag('blocks', 'CRUD operations for user-owned content blocks')
+    .addTag('todos', 'CRUD operations and block promotion for user-owned todo tasks')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

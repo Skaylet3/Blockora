@@ -10,6 +10,7 @@ import { ConfigModule } from './config/config.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { StorageModule } from './storage/storage.module';
 import { NoteModule } from './note/note.module';
+import { TodoModule } from './todo/todo.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { NoteModule } from './note/note.module';
     UsersModule,
     StorageModule,
     NoteModule,
+    TodoModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],

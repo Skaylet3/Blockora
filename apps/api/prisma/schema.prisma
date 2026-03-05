@@ -34,6 +34,19 @@ enum BlockVisibility {
   PUBLIC
 }
 
+enum TodoPriority {
+  HIGHEST
+  HIGH
+  MEDIUM
+  LOW
+  LOWEST
+}
+
+enum TodoStatus {
+  ACTIVE
+  COMPLETED
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -50,6 +63,7 @@ model User {
   refreshTokens RefreshToken[]
   storages      Storage[]      @relation("UserStorages")
   notes         Note[]         @relation("UserNotes")
+  todos         Todo[]         @relation("UserTodos")
 
   @@map("users")
 }
@@ -132,4 +146,23 @@ model Note {
   @@index([storageId])
 
   @@map("notes")
+}
+
+model Todo {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  user        User         @relation("UserTodos", fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  priority    TodoPriority @default(LOWEST)
+  status      TodoStatus   @default(ACTIVE)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+
+  @@map("todos")
 }
