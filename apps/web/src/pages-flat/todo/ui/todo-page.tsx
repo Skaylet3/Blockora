@@ -79,6 +79,11 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 		if (!isDragging) return;
 
 		const handleMove = (e: MouseEvent | TouchEvent) => {
+			if (isDragging && 'touches' in e) {
+				// Prevent page scroll only when dragging the button
+				e.preventDefault();
+			}
+
 			const clientX =
 				'touches' in e
 					? (e as TouchEvent).touches[0].clientX
@@ -110,7 +115,7 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 
 		window.addEventListener('mousemove', handleMove);
 		window.addEventListener('mouseup', handleUp);
-		window.addEventListener('touchmove', handleMove);
+		window.addEventListener('touchmove', handleMove, { passive: false });
 		window.addEventListener('touchend', handleUp);
 
 		return () => {
@@ -149,6 +154,7 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 				position: 'fixed',
 				zIndex: 100,
 				cursor: isDragging ? 'grabbing' : 'grab',
+				touchAction: 'none', // Crucial for mobile dragging
 				transition: isDragging
 					? 'none'
 					: 'all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
@@ -588,10 +594,10 @@ export function TodoPage() {
 						)}
 					</div>
 				)}
-
-				{/* Floating Action Button */}
-				<DraggableFAB show={true} onClick={() => setCreateOpen(true)} />
 			</main>
+
+			{/* Floating Action Button - Moved out of <main> to root for reliable fixed positioning */}
+			<DraggableFAB show={true} onClick={() => setCreateOpen(true)} />
 
 			{/* Details Modal */}
 			<Dialog
