@@ -250,7 +250,7 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 												try {
 													await blocksApi.promoteToTodo(block.id);
 													toast.success('Added to todo list');
-												} catch (err) {
+												} catch {
 													toast.error('Failed to add to todo list');
 												}
 											}

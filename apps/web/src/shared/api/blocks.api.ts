@@ -1,5 +1,6 @@
 import type { Block } from '@/entities/block';
 import { request } from './http-client';
+import type { TodoResponse } from './todos.api';
 
 export interface CreateBlockBody {
 	title: string;
@@ -39,8 +40,8 @@ export const blocksApi = {
 		return request<Block>(`/blocks/${id}`, { method: 'DELETE' });
 	},
 
-	promoteToTodo(id: string, priority?: string): Promise<any> {
-		return request<any>(`/todos/from-block/${id}`, {
+	promoteToTodo(id: string, priority?: string): Promise<TodoResponse> {
+		return request<TodoResponse>(`/todos/from-block/${id}`, {
 			method: 'POST',
 			body: { priority },
 		});
