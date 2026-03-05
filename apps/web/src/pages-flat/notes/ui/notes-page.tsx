@@ -127,7 +127,6 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 		const margin = 24;
 		const buttonWidth = 56;
 
-		// Use requestAnimationFrame to avoid "setState in effect" warning if synchronous
 		requestAnimationFrame(() => {
 			setPosition({
 				x: vw - buttonWidth - margin,
@@ -135,6 +134,20 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 			});
 		});
 	}, []);
+
+	useEffect(() => {
+		if (isDragging) {
+			document.body.style.overflow = 'hidden';
+			document.body.style.touchAction = 'none';
+		} else {
+			document.body.style.overflow = '';
+			document.body.style.touchAction = '';
+		}
+		return () => {
+			document.body.style.overflow = '';
+			document.body.style.touchAction = '';
+		};
+	}, [isDragging]);
 
 	if (!show) return null;
 
@@ -144,13 +157,17 @@ function DraggableFAB({ onClick, show, className }: DraggableFABProps) {
 			onClick={() => !isMoved && onClick()}
 			onMouseDown={handleMouseDown}
 			onTouchStart={handleMouseDown}
+			onContextMenu={e => e.preventDefault()}
 			style={{
 				left: `${position.x}px`,
 				top: `${position.y}px`,
 				position: 'fixed',
-				zIndex: 100,
+				zIndex: 1000,
 				cursor: isDragging ? 'grabbing' : 'grab',
-				touchAction: 'none', // Crucial for mobile dragging
+				touchAction: 'none',
+				userSelect: 'none',
+				WebkitUserSelect: 'none',
+				WebkitTouchCallout: 'none',
 				transition: isDragging
 					? 'none'
 					: 'all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)',
