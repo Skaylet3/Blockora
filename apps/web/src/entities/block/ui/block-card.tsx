@@ -1,6 +1,7 @@
 'use client';
 
 import { cn, getTagColor, TYPE_COLORS } from '@/shared/lib';
+import { ListTodo } from 'lucide-react';
 import type { Block } from '../model/types';
 
 const TYPE_DISPLAY: Record<string, string> = {
@@ -22,9 +23,10 @@ function formatDate(dateStr: string): string {
 interface BlockCardProps {
 	block: Block;
 	onClick?: () => void;
+	onPromote?: () => void;
 }
 
-export function BlockCard({ block, onClick }: BlockCardProps) {
+export function BlockCard({ block, onClick, onPromote }: BlockCardProps) {
 	const isSnippet = block.type === 'SNIPPET';
 
 	return (
@@ -36,9 +38,23 @@ export function BlockCard({ block, onClick }: BlockCardProps) {
 				onClick && 'cursor-pointer',
 			)}
 		>
-			<h3 className='font-semibold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors'>
-				{block.title}
-			</h3>
+			<div className='flex items-start justify-between mb-2 gap-2'>
+				<h3 className='font-semibold text-foreground leading-snug group-hover:text-primary transition-colors flex-1'>
+					{block.title}
+				</h3>
+				{block.type === 'TASK' && onPromote && (
+					<button
+						onClick={e => {
+							e.stopPropagation();
+							onPromote();
+						}}
+						className='p-1.5 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all shrink-0'
+						title='Add to todo list'
+					>
+						<ListTodo className='w-4 h-4' />
+					</button>
+				)}
+			</div>
 
 			<p
 				className={cn(

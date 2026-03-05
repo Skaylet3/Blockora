@@ -244,6 +244,18 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 								key={block.id}
 								block={block}
 								onClick={() => setSelectedBlock(block)}
+								onPromote={
+									block.type === 'TASK'
+										? async () => {
+												try {
+													await blocksApi.promoteToTodo(block.id);
+													toast.success('Added to todo list');
+												} catch (err) {
+													toast.error('Failed to add to todo list');
+												}
+											}
+										: undefined
+								}
 							/>
 						))}
 					</div>

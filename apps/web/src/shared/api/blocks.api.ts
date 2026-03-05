@@ -38,4 +38,11 @@ export const blocksApi = {
 	deleteBlock(id: string): Promise<Block> {
 		return request<Block>(`/blocks/${id}`, { method: 'DELETE' });
 	},
+
+	promoteToTodo(id: string, priority?: string): Promise<any> {
+		return request<any>(`/todos/from-block/${id}`, {
+			method: 'POST',
+			body: { priority },
+		});
+	},
 };

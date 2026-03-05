@@ -7,7 +7,7 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 interface SelectProps {
 	value: string;
 	onChange: (value: string) => void;
-	options: { label: string; value: string }[];
+	options: { label: React.ReactNode | string; value: string }[];
 	placeholder?: string;
 	className?: string;
 }
