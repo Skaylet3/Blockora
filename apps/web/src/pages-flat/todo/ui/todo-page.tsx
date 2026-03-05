@@ -272,7 +272,13 @@ export function TodoPage() {
 		} catch {
 			toast.error('Failed to save todo');
 		}
-	}, [isModalEditing, selectedTodoId, editingTodoId, editTitle, editDescription]);
+	}, [
+		isModalEditing,
+		selectedTodoId,
+		editingTodoId,
+		editTitle,
+		editDescription,
+	]);
 
 	const changePriority = async (id: string, priority: TodoPriority) => {
 		const todo = todos.find(t => t.id === id);
@@ -314,7 +320,10 @@ export function TodoPage() {
 		}
 	};
 
-	const enterModalEdit = (todo: TodoResponse, field: 'title' | 'description') => {
+	const enterModalEdit = (
+		todo: TodoResponse,
+		field: 'title' | 'description',
+	) => {
 		setEditTitle(todo.title);
 		setEditDescription(todo.description ?? '');
 		setIsModalEditing(true);
@@ -616,22 +625,24 @@ export function TodoPage() {
 								</button>
 								<div className='flex-1'>
 									{isModalEditing ? (
-										<div className='space-y-1'>
+										<div className='flex flex-col'>
 											<Textarea
 												ref={modalTitleRef}
 												value={editTitle}
 												onChange={e => setEditTitle(e.target.value)}
-												className='text-lg font-semibold leading-tight min-h-7 p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none bg-transparent shadow-none resize-none'
+												className='text-lg font-semibold leading-tight min-h-0 p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none bg-transparent shadow-none resize-none overflow-hidden'
 												placeholder='Task title'
+												rows={1}
 											/>
 											<Textarea
 												ref={modalDescRef}
 												value={editDescription}
 												onChange={e => setEditDescription(e.target.value)}
-												className='text-sm text-muted-foreground font-medium min-h-15 p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none bg-transparent resize-none shadow-none'
+												className='text-sm text-muted-foreground font-medium min-h-0 mt-1 p-0 border-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none bg-transparent resize-none shadow-none overflow-hidden'
 												placeholder='Add a description...'
+												rows={1}
 											/>
-											<div className='flex items-center gap-3 justify-end pt-2'>
+											<div className='flex items-center gap-3 justify-end mt-2'>
 												<Button
 													variant='ghost'
 													size='sm'

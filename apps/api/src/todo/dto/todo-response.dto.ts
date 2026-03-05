@@ -14,7 +14,7 @@ export class TodoResponseDto {
   @ApiProperty({ example: 'Milk, eggs, bread', nullable: true, type: String })
   description: string | null;
 
-  @ApiProperty({ enum: TodoPriority, enumName: 'TodoPriority', example: TodoPriority.MEDIUM })
+  @ApiProperty({ enum: TodoPriority, enumName: 'TodoPriority', example: TodoPriority.LOWEST })
   priority: TodoPriority;
 
   @ApiProperty({ enum: TodoStatus, enumName: 'TodoStatus', example: TodoStatus.ACTIVE })

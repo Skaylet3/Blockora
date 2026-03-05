@@ -56,6 +56,7 @@ export class TodoService {
       data: {
         userId,
         title: block.title,
+        description: block.content || undefined,
         priority: priority ?? TodoPriority.LOWEST,
       },
     });
