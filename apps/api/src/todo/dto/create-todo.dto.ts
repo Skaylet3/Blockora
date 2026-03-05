@@ -13,7 +13,7 @@ export class CreateTodoDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ enum: TodoPriority, enumName: 'TodoPriority', example: TodoPriority.MEDIUM })
+  @ApiPropertyOptional({ enum: TodoPriority, enumName: 'TodoPriority', example: TodoPriority.LOWEST })
   @IsOptional()
   @IsEnum(TodoPriority)
   priority?: TodoPriority;
