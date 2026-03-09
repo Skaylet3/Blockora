@@ -17,6 +17,8 @@ export class TurnstileService {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
   async verify(token: string): Promise<void> {
+    if (this.config.NODE_ENV === 'test') return;
+
     let response: Response;
     try {
       response = await fetch(
