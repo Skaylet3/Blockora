@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class RefreshDto {
   @ApiProperty({
@@ -8,4 +8,12 @@ export class RefreshDto {
   })
   @IsString()
   refreshToken: string;
+
+  @ApiProperty({
+    description: 'Cloudflare Turnstile CAPTCHA token',
+    example: '0.turnstile-token-string',
+  })
+  @IsString()
+  @IsNotEmpty()
+  captchaToken: string;
 }

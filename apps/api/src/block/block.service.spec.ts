@@ -119,6 +119,14 @@ describe('BlockService', () => {
       );
       expect(result).toEqual(updated);
     });
+
+    it('throws NotFoundException when block does not exist', async () => {
+      mockPrisma.db.block.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('missing', 'user-1', { title: 'Updated' }),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('remove', () => {
@@ -136,6 +144,14 @@ describe('BlockService', () => {
         }),
       );
       expect(result.status).toBe(BlockStatus.DELETED);
+    });
+
+    it('throws NotFoundException when block does not exist', async () => {
+      mockPrisma.db.block.findFirst.mockResolvedValue(null);
+
+      await expect(service.remove('missing', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

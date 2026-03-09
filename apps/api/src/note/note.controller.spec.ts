@@ -47,6 +47,16 @@ describe('NoteController', () => {
       expect(mockNoteService.create).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual(sampleNote);
     });
+
+    it('propagates NotFoundException when storage not found', async () => {
+      const { NotFoundException } = await import('@nestjs/common');
+      mockNoteService.create.mockRejectedValue(
+        new NotFoundException('Storage not found'),
+      );
+
+      const dto = { title: 'Note', storageId: 'bad-storage' };
+      await expect(controller.create(user, dto)).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('findAll', () => {

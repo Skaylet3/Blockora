@@ -7,6 +7,7 @@ import { Button, Input, Label } from '@/shared/ui';
 import { SquareDashed } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -14,7 +15,9 @@ export function LoginForm() {
 	const router = useRouter();
 	const [email, setEmail] = React.useState('');
 	const [password, setPassword] = React.useState('');
+	const [captchaToken, setCaptchaToken] = React.useState('');
 	const [loading, setLoading] = React.useState(false);
+	const turnstileRef = React.useRef<TurnstileInstance | undefined>(undefined);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -22,9 +25,13 @@ export function LoginForm() {
 			toast.error('Please fill in all fields.');
 			return;
 		}
+		if (!captchaToken) {
+			toast.error('Please complete the CAPTCHA verification.');
+			return;
+		}
 		setLoading(true);
 		try {
-			const pair = await authApi.login({ email, password });
+			const pair = await authApi.login({ email, password, captchaToken });
 			setTokens(pair);
 			document.cookie = 'blockora-session=1; path=/; max-age=86400';
 			toast.success('Signed in. Welcome back!');
@@ -39,6 +46,8 @@ export function LoginForm() {
 			}
 		} finally {
 			setLoading(false);
+			setCaptchaToken('');
+			turnstileRef.current?.reset();
 		}
 	}
 
@@ -87,7 +96,18 @@ export function LoginForm() {
 						/>
 					</div>
 
-					<Button type='submit' className='w-full' disabled={loading}>
+					<Turnstile
+						ref={turnstileRef}
+						siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+						onSuccess={setCaptchaToken}
+						onError={() => {
+							setCaptchaToken('');
+							toast.error('CAPTCHA failed to load. Please disable content blockers and retry.');
+						}}
+						onExpire={() => setCaptchaToken('')}
+					/>
+
+					<Button type='submit' className='w-full' disabled={loading || !captchaToken}>
 						{loading ? 'Signing in...' : 'Sign in'}
 					</Button>
 

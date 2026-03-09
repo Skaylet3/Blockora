@@ -50,6 +50,17 @@ describe('BlockController', () => {
     expect(result).toEqual(sampleBlock);
   });
 
+  it('findOne — propagates NotFoundException from service', async () => {
+    const { NotFoundException } = await import('@nestjs/common');
+    mockBlockService.findOne.mockRejectedValue(
+      new NotFoundException('Block not found'),
+    );
+
+    await expect(controller.findOne('missing', mockUser)).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
   it('create — delegates to blockService.create with userId and dto', async () => {
     const dto = { title: 'New Block', content: 'Content' };
     mockBlockService.create.mockResolvedValue({ ...sampleBlock, ...dto });

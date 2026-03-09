@@ -33,7 +33,12 @@ interface EditBlockDialogProps {
 	onSave: (updated: Block) => void;
 }
 
-export function EditBlockDialog({ block, open, onClose, onSave }: EditBlockDialogProps) {
+export function EditBlockDialog({
+	block,
+	open,
+	onClose,
+	onSave,
+}: EditBlockDialogProps) {
 	const [title, setTitle] = React.useState(block.title);
 	const [content, setContent] = React.useState(block.content);
 	const [type, setType] = React.useState<BlockType>(block.type);
@@ -55,10 +60,14 @@ export function EditBlockDialog({ block, open, onClose, onSave }: EditBlockDialo
 			return;
 		}
 
-		const tags = tagsInput
-			.split(',')
-			.map(t => t.trim().toLowerCase())
-			.filter(Boolean);
+		const tags = Array.from(
+			new Set(
+				tagsInput
+					.split(',')
+					.map(t => t.trim().toLowerCase())
+					.filter(Boolean),
+			),
+		);
 
 		setSubmitting(true);
 		try {
@@ -72,7 +81,9 @@ export function EditBlockDialog({ block, open, onClose, onSave }: EditBlockDialo
 			toast.success('Block updated.');
 		} catch (err: unknown) {
 			if (err instanceof ApiRequestError) {
-				const msg = Array.isArray(err.messages) ? err.messages.join(', ') : err.message;
+				const msg = Array.isArray(err.messages)
+					? err.messages.join(', ')
+					: err.message;
 				toast.error(msg);
 			} else {
 				toast.error('Failed to update block. Please try again.');
@@ -139,7 +150,12 @@ export function EditBlockDialog({ block, open, onClose, onSave }: EditBlockDialo
 					</div>
 
 					<DialogFooter>
-						<Button type='button' variant='outline' onClick={onClose} disabled={submitting}>
+						<Button
+							type='button'
+							variant='outline'
+							onClick={onClose}
+							disabled={submitting}
+						>
 							Cancel
 						</Button>
 						<Button type='submit' disabled={submitting}>

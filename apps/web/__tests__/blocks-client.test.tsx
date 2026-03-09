@@ -176,4 +176,47 @@ describe('BlocksClient — edge cases', () => {
 		// Active tab is default — no active blocks → empty state
 		await waitFor(() => screen.getByText('No blocks yet'));
 	});
+
+	it('shows error state when getBlocks rejects', async () => {
+		vi.mocked(blocksApi.getBlocks).mockRejectedValueOnce(
+			new Error('Network failure'),
+		);
+
+		render(<BlocksClient initialBlocks={[]} />);
+
+		await waitFor(() => screen.getByText('Network failure'));
+	});
+
+	it('shows empty archived state when no blocks are archived', async () => {
+		const allActive: Block[] = DASHBOARD_BLOCKS.map(b => ({
+			...b,
+			status: 'ACTIVE' as const,
+		}));
+		vi.mocked(blocksApi.getBlocks).mockResolvedValueOnce(allActive);
+
+		const user = userEvent.setup();
+		render(<BlocksClient initialBlocks={[]} />);
+
+		await waitFor(() => screen.getByText('React Hooks Guide'));
+
+		await user.click(screen.getByRole('button', { name: /Archived/ }));
+
+		expect(screen.getByText('No archived blocks')).toBeInTheDocument();
+	});
+
+	it('filters blocks by tag when tag filter is selected', async () => {
+		const user = userEvent.setup();
+		render(<BlocksClient initialBlocks={[]} />);
+
+		await waitFor(() => screen.getByText('React Hooks Guide'));
+
+		// The tag filter is the second combobox
+		const tagSelect = screen.getAllByRole('combobox')[1];
+		await user.click(tagSelect);
+		await user.click(await screen.findByRole('option', { name: 'react' }));
+
+		expect(screen.getByText('React Hooks Guide')).toBeInTheDocument();
+		expect(screen.queryByText('Deploy Checklist')).not.toBeInTheDocument();
+		expect(screen.queryByText('Auth Snippet')).not.toBeInTheDocument();
+	});
 });

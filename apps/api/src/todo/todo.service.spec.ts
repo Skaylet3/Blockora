@@ -175,7 +175,7 @@ describe('TodoService', () => {
         where: { id: 'block-uuid', userId: 'user-uuid', status: { not: BlockStatus.DELETED } },
       });
       expect(mockPrisma.db.todo.create).toHaveBeenCalledWith({
-        data: { userId: 'user-uuid', title: mockBlock.title, priority: TodoPriority.LOWEST },
+        data: { userId: 'user-uuid', title: mockBlock.title, description: 'Some content', priority: TodoPriority.LOWEST },
       });
     });
 
@@ -184,7 +184,22 @@ describe('TodoService', () => {
       mockPrisma.db.todo.create.mockResolvedValue({ ...mockTodo, priority: TodoPriority.HIGHEST });
       await service.promoteBlock('block-uuid', 'user-uuid', TodoPriority.HIGHEST);
       expect(mockPrisma.db.todo.create).toHaveBeenCalledWith({
-        data: { userId: 'user-uuid', title: mockBlock.title, priority: TodoPriority.HIGHEST },
+        data: { userId: 'user-uuid', title: mockBlock.title, description: 'Some content', priority: TodoPriority.HIGHEST },
+      });
+    });
+
+    it('sets description to undefined when block content is empty', async () => {
+      const emptyContentBlock = { ...mockBlock, content: '' };
+      mockPrisma.db.block.findFirst.mockResolvedValue(emptyContentBlock);
+      mockPrisma.db.todo.create.mockResolvedValue(mockTodo);
+      await service.promoteBlock('block-uuid', 'user-uuid');
+      expect(mockPrisma.db.todo.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-uuid',
+          title: mockBlock.title,
+          description: undefined,
+          priority: TodoPriority.LOWEST,
+        },
       });
     });
 

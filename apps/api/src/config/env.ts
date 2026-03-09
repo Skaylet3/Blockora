@@ -15,6 +15,7 @@ const envSchema = z.object({
       .map((s) => s.trim())
       .filter(Boolean),
   ),
+  TURNSTILE_SECRET_KEY: z.string().min(1),
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),

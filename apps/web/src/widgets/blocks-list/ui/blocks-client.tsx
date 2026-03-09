@@ -104,6 +104,13 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 		if (!block) return;
 		const nextStatus: BlockStatus =
 			block.status === 'ACTIVE' ? 'ARCHIVED' : 'ACTIVE';
+		const prevBlocks = blocks;
+
+		setBlocks(prev =>
+			prev.map(b => (b.id === id ? { ...b, status: nextStatus } : b)),
+		);
+		setSelectedBlock(null);
+
 		try {
 			const updated = await blocksApi.updateBlock(id, { status: nextStatus });
 			setBlocks(prev => prev.map(b => (b.id === id ? updated : b)));
@@ -113,11 +120,11 @@ export function BlocksClient({ initialBlocks }: BlocksClientProps) {
 					: `"${block.title}" restored.`,
 			);
 		} catch (err: unknown) {
+			setBlocks(prevBlocks);
 			const msg =
 				err instanceof Error ? err.message : 'Failed to update block.';
 			toast.error(msg);
 		}
-		setSelectedBlock(null);
 	}
 
 	function handleSaveEdit(updated: Block) {
@@ -474,7 +481,7 @@ function BlockDetailSheet({
 								Tags
 							</p>
 							<div className='flex flex-wrap gap-1.5'>
-								{block.tags.map(tag => (
+								{Array.from(new Set(block.tags)).map(tag => (
 									<span
 										key={tag}
 										className={cn(

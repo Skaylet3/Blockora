@@ -91,4 +91,59 @@ describe('NotesPage', () => {
 			expect(screen.getByText('My Real Storage')).toBeInTheDocument(),
 		);
 	});
+
+	it('shows multiple storages including nested ones', async () => {
+		mockStoragesApi.getStorages.mockResolvedValue([
+			{
+				id: 's1',
+				name: 'Parent Storage',
+				parentId: null,
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+			{
+				id: 's2',
+				name: 'Child Storage',
+				parentId: 's1',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+		]);
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Parent Storage')).toBeInTheDocument(),
+		);
+		// Child is nested and only visible when parent is expanded — not visible initially
+		expect(screen.queryByText('Child Storage')).not.toBeInTheDocument();
+	});
+
+	it('shows fallback error message when error has no message property', async () => {
+		mockStoragesApi.getStorages.mockRejectedValue({});
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Failed to load storages.')).toBeInTheDocument(),
+		);
+	});
+
+	it('shows "Select a storage to get started" in main content area', async () => {
+		mockStoragesApi.getStorages.mockResolvedValue([
+			{
+				id: 's1',
+				name: 'Test Storage',
+				parentId: null,
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+		]);
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Select a storage to get started')).toBeInTheDocument(),
+		);
+	});
 });

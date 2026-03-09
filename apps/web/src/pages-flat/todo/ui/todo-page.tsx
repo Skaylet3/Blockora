@@ -264,12 +264,15 @@ export function TodoPage() {
 	};
 
 	const deleteTodo = async (id: string) => {
+		const prev = todos;
+		setTodos(p => p.filter(t => t.id !== id));
+		if (selectedTodoId === id) setSelectedTodoId(null);
+
 		try {
 			await todosApi.deleteTodo(id);
-			setTodos(prev => prev.filter(t => t.id !== id));
-			if (selectedTodoId === id) setSelectedTodoId(null);
 			toast.success('Todo deleted');
 		} catch {
+			setTodos(prev);
 			toast.error('Failed to delete todo');
 		}
 	};
@@ -284,19 +287,29 @@ export function TodoPage() {
 		const idToSave = isModalEditing ? selectedTodoId : editingTodoId;
 		if (!idToSave) return;
 
+		const title = editTitle.trim();
+		const description = editDescription.trim() || null;
+
+		const prevTodos = todos;
+		setTodos(prev =>
+			prev.map(t => (t.id === idToSave ? { ...t, title, description } : t)),
+		);
+		setEditingTodoId(null);
+		setIsModalEditing(false);
+
 		try {
 			const updated = await todosApi.updateTodo(idToSave, {
-				title: editTitle,
-				description: editDescription || undefined,
+				title,
+				description: description || undefined,
 			});
 			setTodos(prev => prev.map(t => (t.id === idToSave ? updated : t)));
-			setEditingTodoId(null);
-			setIsModalEditing(false);
 			toast.success('Todo saved');
 		} catch {
+			setTodos(prevTodos);
 			toast.error('Failed to save todo');
 		}
 	}, [
+		todos,
 		isModalEditing,
 		selectedTodoId,
 		editingTodoId,
@@ -323,21 +336,38 @@ export function TodoPage() {
 	};
 
 	const handleCreate = async () => {
-		if (!createTitle.trim()) return;
+		const title = createTitle.trim();
+		const description = createDescription.trim() || null;
+
 		setIsSaving(true);
+		const optimisticTodo: TodoResponse = {
+			id: `temp-${Date.now()}`,
+			userId: '',
+			title,
+			description,
+			priority: createPriority,
+			status: 'ACTIVE' as TodoStatus,
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+		};
+		setTodos(prev => [optimisticTodo, ...prev]);
+		setCreateTitle('');
+		setCreateDescription('');
+		setCreatePriority('LOWEST');
+		setCreateOpen(false);
+
 		try {
 			const newTodo = await todosApi.createTodo({
-				title: createTitle.trim(),
-				description: createDescription.trim() || undefined,
-				priority: createPriority,
+				title: optimisticTodo.title,
+				description: optimisticTodo.description ?? undefined,
+				priority: optimisticTodo.priority,
 			});
-			setTodos(prev => [newTodo, ...prev]);
-			setCreateTitle('');
-			setCreateDescription('');
-			setCreatePriority('LOWEST');
-			setCreateOpen(false);
+			setTodos(prev =>
+				prev.map(t => (t.id === optimisticTodo.id ? newTodo : t)),
+			);
 			toast.success('Todo created');
 		} catch {
+			setTodos(prev => prev.filter(t => t.id !== optimisticTodo.id));
 			toast.error('Failed to create todo');
 		} finally {
 			setIsSaving(false);

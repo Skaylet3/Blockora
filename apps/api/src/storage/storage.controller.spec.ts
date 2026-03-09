@@ -69,5 +69,16 @@ describe('StorageController', () => {
         'storage-1',
       );
     });
+
+    it('propagates NotFoundException when storage not found', async () => {
+      const { NotFoundException } = await import('@nestjs/common');
+      mockStorageService.remove.mockRejectedValue(
+        new NotFoundException('Storage not found'),
+      );
+
+      await expect(controller.remove(user, 'bad-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 });

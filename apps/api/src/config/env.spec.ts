@@ -9,6 +9,7 @@ describe('validateEnv', () => {
     DATABASE_URL: 'postgresql://postgres:pass@localhost:5432/db',
     JWT_SECRET: 'test-secret-that-is-at-least-32-chars-long!',
     CORS_ORIGINS: 'http://localhost:5173',
+    TURNSTILE_SECRET_KEY: 'test-turnstile-secret',
     NODE_ENV: 'test',
   };
 

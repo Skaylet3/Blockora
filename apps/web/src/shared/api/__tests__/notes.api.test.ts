@@ -84,6 +84,21 @@ describe('notesApi', () => {
 		});
 	});
 
+	describe('updateNote — content only', () => {
+		it('calls PATCH /notes/:id with content-only body', async () => {
+			const body = { content: 'New content' };
+			mockRequest.mockResolvedValue({ ...mockNote, content: 'New content' });
+
+			const result = await notesApi.updateNote('note-1', body);
+
+			expect(mockRequest).toHaveBeenCalledWith('/notes/note-1', {
+				method: 'PATCH',
+				body,
+			});
+			expect(result.content).toBe('New content');
+		});
+	});
+
 	describe('deleteNote', () => {
 		it('calls DELETE /notes/:id', async () => {
 			mockRequest.mockResolvedValue(undefined);
@@ -93,6 +108,38 @@ describe('notesApi', () => {
 			expect(mockRequest).toHaveBeenCalledWith('/notes/note-1', {
 				method: 'DELETE',
 			});
+		});
+	});
+
+	describe('error propagation', () => {
+		it('getNotesByStorage propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Unauthorized'));
+
+			await expect(notesApi.getNotesByStorage('s1')).rejects.toThrow(
+				'Unauthorized',
+			);
+		});
+
+		it('createNote propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Validation failed'));
+
+			await expect(
+				notesApi.createNote({ title: 'Bad', storageId: 's1' }),
+			).rejects.toThrow('Validation failed');
+		});
+
+		it('updateNote propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Not found'));
+
+			await expect(
+				notesApi.updateNote('missing', { title: 'X' }),
+			).rejects.toThrow('Not found');
+		});
+
+		it('deleteNote propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Forbidden'));
+
+			await expect(notesApi.deleteNote('note-1')).rejects.toThrow('Forbidden');
 		});
 	});
 });

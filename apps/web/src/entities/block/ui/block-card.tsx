@@ -76,7 +76,7 @@ export function BlockCard({ block, onClick, onPromote }: BlockCardProps) {
 				>
 					{TYPE_DISPLAY[block.type] ?? block.type}
 				</span>
-				{block.tags.map(tag => (
+				{Array.from(new Set(block.tags)).map(tag => (
 					<span
 						key={tag}
 						className={cn(

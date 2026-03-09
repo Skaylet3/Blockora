@@ -19,15 +19,18 @@ export interface RegisterBody {
 	email: string;
 	password: string;
 	displayName?: string;
+	captchaToken: string;
 }
 
 export interface LoginBody {
 	email: string;
 	password: string;
+	captchaToken: string;
 }
 
 export interface RefreshBody {
 	refreshToken: string;
+	captchaToken: string;
 }
 
 export const authApi = {

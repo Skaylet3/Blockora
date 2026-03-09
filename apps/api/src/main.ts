@@ -1,6 +1,6 @@
+import { config as loadDotenv } from 'dotenv';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { config as loadDotenv } from 'dotenv';
 import { validateEnv } from './config/env';
 
 function initializeEnv() {
@@ -20,8 +20,8 @@ function initializeEnv() {
 initializeEnv();
 const config = validateEnv();
 
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -35,6 +35,26 @@ async function bootstrap() {
       errorHttpStatusCode: 422,
     }),
   );
+
+  app.use((req: any, res: any, next: any) => {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https://cdn.jsdelivr.net",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join('; ');
+
+    res.setHeader('Content-Security-Policy', csp);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
 
   app.enableCors({
     origin: config.CORS_ORIGINS,
@@ -61,7 +81,10 @@ async function bootstrap() {
     )
     .addTag('auth', 'Registration, login, token refresh, and logout')
     .addTag('blocks', 'CRUD operations for user-owned content blocks')
-    .addTag('todos', 'CRUD operations and block promotion for user-owned todo tasks')
+    .addTag(
+      'todos',
+      'CRUD operations and block promotion for user-owned todo tasks',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

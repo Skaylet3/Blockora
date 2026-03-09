@@ -6,15 +6,16 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { Throttle } from '@nestjs/throttler';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
-import { TokenPairDto } from './dto/token-pair.dto';
-import { MeResponseDto } from './dto/me-response.dto';
-import { Public } from './decorators/public.decorator';
+import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Public } from './decorators/public.decorator';
+import { LoginDto } from './dto/login.dto';
+import { MeResponseDto } from './dto/me-response.dto';
+import { RefreshDto } from './dto/refresh.dto';
+import { RegisterDto } from './dto/register.dto';
+import { TokenPairDto } from './dto/token-pair.dto';
 import type { JwtPayload } from './types/jwt-payload.type';
 
 @ApiTags('auth')
@@ -27,6 +28,11 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @Throttle({
+    short: { ttl: 60000, limit: 3 },
+    medium: { ttl: 600000, limit: 10 },
+    long: { ttl: 3600000, limit: 20 },
+  })
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
@@ -43,6 +49,11 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @Throttle({
+    short: { ttl: 60000, limit: 5 },
+    medium: { ttl: 600000, limit: 15 },
+    long: { ttl: 3600000, limit: 30 },
+  })
   @ApiOperation({ summary: 'Log in with existing credentials' })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -59,6 +70,11 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(200)
+  @Throttle({
+    short: { ttl: 60000, limit: 10 },
+    medium: { ttl: 600000, limit: 30 },
+    long: { ttl: 3600000, limit: 60 },
+  })
   @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
   @ApiBody({ type: RefreshDto })
   @ApiResponse({

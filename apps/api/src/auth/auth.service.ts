@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { TurnstileService } from '../captcha/turnstile.service';
 import { APP_CONFIG } from '../config/config.module';
 import type { AppConfig } from '../config/env';
 import { JwtPayload } from './types/jwt-payload.type';
@@ -20,15 +21,20 @@ export interface TokenPair {
   refreshToken: string;
 }
 
+// Pre-computed dummy hash so timing is consistent when user doesn't exist
+const DUMMY_HASH = '$argon2id$v=19$m=65536,t=3,p=4$dGltaW5nLWF0dGFjaw$dGltaW5nLWVxdWFsaXphdGlvbi1kdW1teS1oYXNo';
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly turnstileService: TurnstileService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   async register(dto: RegisterDto): Promise<TokenPair> {
+    await this.turnstileService.verify(dto.captchaToken);
     const existing = await this.prisma.db.user.findFirst({
       where: { email: dto.email },
     });
@@ -47,10 +53,12 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<TokenPair> {
+    await this.turnstileService.verify(dto.captchaToken);
     const user = await this.prisma.db.user.findFirst({
       where: { email: dto.email },
     });
     if (!user) {
+      await argon2.verify(DUMMY_HASH, dto.password).catch(() => {});
       throw new UnauthorizedException('Invalid credentials');
     }
     const valid = await argon2.verify(user.passwordHash, dto.password);
@@ -61,6 +69,7 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshDto): Promise<TokenPair> {
+    await this.turnstileService.verify(dto.captchaToken);
     // Find all active (non-revoked, non-expired) refresh tokens and verify
     const activeTokens = await this.prisma.db.refreshToken.findMany({
       where: {

@@ -147,6 +147,14 @@ describe('NoteService', () => {
       );
       expect(result).toEqual(updated);
     });
+
+    it('throws NotFoundException when note does not exist', async () => {
+      mockPrisma.db.note.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-1', 'missing-note', { title: 'Updated' }),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('remove', () => {
