@@ -26,7 +26,7 @@ test.describe('Users (e2e)', () => {
     const email = uniqueEmail('e2e-users');
 
     const registerRes = await ctx.api.post('/auth/register', {
-      data: { email, password: 'password123' },
+      data: { email, password: 'password123', captchaToken: 'test' },
     });
     expect(registerRes.status()).toBe(201);
     const { accessToken } = await registerRes.json();
@@ -57,7 +57,7 @@ test.describe('Users (e2e)', () => {
   test('PATCH /users/me with displayName exceeding 100 chars returns 422', async () => {
     const email = uniqueEmail('e2e-users-validation');
     const registerRes = await ctx.api.post('/auth/register', {
-      data: { email, password: 'password123' },
+      data: { email, password: 'password123', captchaToken: 'test' },
     });
     const { accessToken } = await registerRes.json();
 

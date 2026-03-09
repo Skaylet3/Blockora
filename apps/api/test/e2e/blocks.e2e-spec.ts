@@ -25,7 +25,7 @@ test.describe('Blocks (e2e)', () => {
   test('create, update, delete block via real localhost HTTP API', async () => {
     const email = uniqueEmail('e2e-block');
     const registerRes = await ctx.api.post('/auth/register', {
-      data: { email, password: 'password123' },
+      data: { email, password: 'password123', captchaToken: 'test' },
     });
     const { accessToken } = await registerRes.json();
 

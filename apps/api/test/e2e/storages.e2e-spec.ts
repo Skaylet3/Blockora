@@ -24,7 +24,7 @@ test.describe('Storages (e2e)', () => {
 
   async function registerAndGetToken(email: string) {
     const res = await ctx.api.post('/auth/register', {
-      data: { email, password: 'password123' },
+      data: { email, password: 'password123', captchaToken: 'test' },
     });
     const { accessToken } = await res.json();
     return accessToken as string;
