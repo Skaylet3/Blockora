@@ -22,6 +22,7 @@ vi.mock('@/shared/api/storages.api', () => ({
 
 vi.mock('@/shared/api/notes.api', () => ({
 	notesApi: {
+		getNotes: vi.fn(),
 		getNotesByStorage: vi.fn(),
 		createNote: vi.fn(),
 		updateNote: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('@/shared/api/notes.api', () => ({
 	},
 }));
 
+import { notesApi } from '@/shared/api/notes.api';
 import { storagesApi } from '@/shared/api/storages.api';
 import { NotesPage } from '../notes-page';
 
@@ -38,13 +40,19 @@ const mockStoragesApi = storagesApi as {
 	deleteStorage: ReturnType<typeof vi.fn>;
 };
 
+const mockNotesApi = notesApi as {
+	getNotes: ReturnType<typeof vi.fn>;
+};
+
 describe('NotesPage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockNotesApi.getNotes.mockResolvedValue([]);
 	});
 
 	it('shows loading state while getStorages is pending', () => {
 		mockStoragesApi.getStorages.mockReturnValue(new Promise(() => {}));
+		mockNotesApi.getNotes.mockReturnValue(new Promise(() => {}));
 
 		render(<NotesPage />);
 
@@ -125,7 +133,7 @@ describe('NotesPage', () => {
 		render(<NotesPage />);
 
 		await waitFor(() =>
-			expect(screen.getByText('Failed to load storages.')).toBeInTheDocument(),
+			expect(screen.getByText('Failed to load data.')).toBeInTheDocument(),
 		);
 	});
 
