@@ -26,13 +26,13 @@ test.describe('Auth (e2e)', () => {
     const email = uniqueEmail('e2e-auth');
 
     const registerRes = await ctx.api.post('/auth/register', {
-      data: { email, password: 'password123', captchaToken: 'test' },
+      data: { email, password: 'Password123', captchaToken: 'test' },
     });
     expect(registerRes.status()).toBe(201);
     const registerBody = await registerRes.json();
 
     const loginRes = await ctx.api.post('/auth/login', {
-      data: { email, password: 'password123', captchaToken: 'test' },
+      data: { email, password: 'Password123', captchaToken: 'test' },
     });
     expect(loginRes.status()).toBe(200);
     const loginBody = await loginRes.json();
