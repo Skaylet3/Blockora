@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
+import { TurnstileService } from '../captcha/turnstile.service';
 import { APP_CONFIG } from '../config/config.module';
 import { PrismaService } from '../prisma/prisma.service';
 import * as argon2 from 'argon2';
@@ -38,6 +39,8 @@ const mockJwtService = {
   verify: vi.fn(),
 };
 
+const mockTurnstile = { verify: vi.fn() };
+
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -48,10 +51,13 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: APP_CONFIG, useValue: mockConfig },
+        { provide: TurnstileService, useValue: mockTurnstile },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    mockTurnstile.verify.mockReset();
+    mockJwtService.sign.mockReturnValue('test-access-token');
   });
 
   describe('register', () => {
@@ -66,6 +72,7 @@ describe('AuthService', () => {
       const result = await service.register({
         email: 'test@test.com',
         password: 'password123',
+        captchaToken: 'test-token',
       });
 
       expect(result).toHaveProperty('accessToken');
@@ -77,6 +84,31 @@ describe('AuthService', () => {
       );
     });
 
+    it('should pass displayName to user.create when provided', async () => {
+      mockPrisma.db.user.findFirst.mockResolvedValue(null);
+      mockPrisma.db.user.create.mockResolvedValue({
+        id: 'user-2',
+        email: 'alice@test.com',
+      });
+      mockPrisma.db.refreshToken.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'alice@test.com',
+        password: 'password123',
+        displayName: 'Alice',
+        captchaToken: 'test-token',
+      });
+
+      expect(mockPrisma.db.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'alice@test.com',
+            displayName: 'Alice',
+          }),
+        }),
+      );
+    });
+
     it('should throw ConflictException if email already registered', async () => {
       mockPrisma.db.user.findFirst.mockResolvedValue({
         id: 'existing',
@@ -84,8 +116,16 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.register({ email: 'test@test.com', password: 'password123' }),
+        service.register({ email: 'test@test.com', password: 'password123', captchaToken: 'test-token' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw ForbiddenException when CAPTCHA fails', async () => {
+      mockTurnstile.verify.mockRejectedValue(new ForbiddenException('CAPTCHA verification failed'));
+
+      await expect(
+        service.register({ email: 'test@test.com', password: 'password123', captchaToken: 'bad-token' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -102,6 +142,7 @@ describe('AuthService', () => {
       const result = await service.login({
         email: 'test@test.com',
         password: 'password123',
+        captchaToken: 'test-token',
       });
 
       expect(result).toHaveProperty('accessToken');
@@ -117,7 +158,7 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.login({ email: 'test@test.com', password: 'wrongpassword' }),
+        service.login({ email: 'test@test.com', password: 'wrongpassword', captchaToken: 'test-token' }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -125,8 +166,16 @@ describe('AuthService', () => {
       mockPrisma.db.user.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.login({ email: 'nobody@test.com', password: 'password123' }),
+        service.login({ email: 'nobody@test.com', password: 'password123', captchaToken: 'test-token' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw ForbiddenException when CAPTCHA fails', async () => {
+      mockTurnstile.verify.mockRejectedValue(new ForbiddenException('CAPTCHA verification failed'));
+
+      await expect(
+        service.login({ email: 'test@test.com', password: 'password123', captchaToken: 'bad-token' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -150,7 +199,7 @@ describe('AuthService', () => {
       });
       mockPrisma.db.refreshToken.create.mockResolvedValue({});
 
-      const result = await service.refresh({ refreshToken: rawToken });
+      const result = await service.refresh({ refreshToken: rawToken, captchaToken: 'test-token' });
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
@@ -166,8 +215,53 @@ describe('AuthService', () => {
       mockPrisma.db.refreshToken.findMany.mockResolvedValue([]);
 
       await expect(
-        service.refresh({ refreshToken: 'invalid-token' }),
+        service.refresh({ refreshToken: 'invalid-token', captchaToken: 'test-token' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw UnauthorizedException when user no longer exists after token match', async () => {
+      const rawToken = 'raw-token-value';
+      const hash = await argon2.hash(rawToken);
+      mockPrisma.db.refreshToken.findMany.mockResolvedValue([
+        {
+          id: 'rt-1',
+          userId: 'deleted-user',
+          tokenHash: hash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          revokedAt: null,
+        },
+      ]);
+      mockPrisma.db.refreshToken.update.mockResolvedValue({});
+      mockPrisma.db.user.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.refresh({ refreshToken: rawToken, captchaToken: 'test-token' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should not match when no active token hashes match the provided token', async () => {
+      const otherHash = await argon2.hash('different-token');
+      mockPrisma.db.refreshToken.findMany.mockResolvedValue([
+        {
+          id: 'rt-1',
+          userId: 'user-1',
+          tokenHash: otherHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          revokedAt: null,
+        },
+      ]);
+
+      await expect(
+        service.refresh({ refreshToken: 'non-matching-token', captchaToken: 'test-token' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should throw ForbiddenException when CAPTCHA fails', async () => {
+      mockTurnstile.verify.mockRejectedValue(new ForbiddenException('CAPTCHA verification failed'));
+
+      await expect(
+        service.refresh({ refreshToken: 'some-token', captchaToken: 'bad-token' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

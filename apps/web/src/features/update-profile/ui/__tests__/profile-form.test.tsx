@@ -132,4 +132,74 @@ describe('ProfileForm', () => {
 			expect(mockToast.info).toHaveBeenCalledWith('Changes discarded.');
 		});
 	});
+
+	describe('edge cases', () => {
+		it('email field is disabled (read-only)', () => {
+			render(
+				<ProfileForm initialEmail='a@b.com' initialUserId='u1' initialDisplayName='Alice' />,
+			);
+
+			expect(screen.getByLabelText('Email')).toBeDisabled();
+		});
+
+		it('sends undefined displayName when name is whitespace-only', async () => {
+			mockAuthApi.updateProfile.mockResolvedValue({
+				userId: 'u1',
+				email: 'a@b.com',
+				displayName: null,
+			});
+
+			render(
+				<ProfileForm initialEmail='a@b.com' initialUserId='u1' initialDisplayName='Alice' />,
+			);
+
+			await user.clear(screen.getByLabelText('Name'));
+			await user.type(screen.getByLabelText('Name'), '   ');
+			await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+			await waitFor(() =>
+				expect(mockAuthApi.updateProfile).toHaveBeenCalledWith({ displayName: undefined }),
+			);
+		});
+
+		it('silently fails when getMe rejects (no toast, empty fields shown)', async () => {
+			mockAuthApi.getMe.mockRejectedValue(new Error('Unauthorized'));
+
+			render(<ProfileForm initialEmail='' initialUserId='' initialDisplayName='' />);
+
+			await waitFor(() =>
+				expect(screen.getByLabelText('Name')).not.toHaveAttribute('placeholder', 'Loading...'),
+			);
+
+			expect(screen.getByLabelText('Name')).toHaveValue('');
+			expect(mockToast.error).not.toHaveBeenCalled();
+		});
+
+		it('updates savedDisplayName after successful save so cancel reverts to new value', async () => {
+			mockAuthApi.updateProfile.mockResolvedValue({
+				userId: 'u1',
+				email: 'a@b.com',
+				displayName: 'Bob',
+			});
+
+			render(
+				<ProfileForm initialEmail='a@b.com' initialUserId='u1' initialDisplayName='Alice' />,
+			);
+
+			await user.clear(screen.getByLabelText('Name'));
+			await user.type(screen.getByLabelText('Name'), 'Bob');
+			await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+			await waitFor(() =>
+				expect(mockToast.success).toHaveBeenCalledWith('Profile saved.'),
+			);
+
+			// Now change again and cancel — should revert to 'Bob', not 'Alice'
+			await user.clear(screen.getByLabelText('Name'));
+			await user.type(screen.getByLabelText('Name'), 'Temporary');
+			await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+			expect(screen.getByLabelText('Name')).toHaveValue('Bob');
+		});
+	});
 });

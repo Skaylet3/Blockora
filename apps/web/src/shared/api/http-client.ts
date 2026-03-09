@@ -42,25 +42,47 @@ function getBaseUrl(): string {
 
 let refreshPromise: Promise<boolean> | null = null;
 
+async function getTurnstileToken(): Promise<string> {
+	if (typeof window === 'undefined' || !window.turnstile) return '';
+	try {
+		const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+		return await window.turnstile.execute(siteKey, { action: 'refresh' });
+	} catch {
+		return '';
+	}
+}
+
+async function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function doRefresh(): Promise<boolean> {
 	const refreshToken = getRefreshToken();
 	if (!refreshToken) return false;
-	try {
-		const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ refreshToken }),
-		});
-		if (!res.ok) return false;
-		const pair = (await res.json()) as {
-			accessToken: string;
-			refreshToken: string;
-		};
-		setTokens(pair);
-		return true;
-	} catch {
-		return false;
+
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			if (attempt > 0) await delay(1000 * attempt);
+			const captchaToken = await getTurnstileToken();
+			const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ refreshToken, captchaToken }),
+			});
+			if (res.ok) {
+				const pair = (await res.json()) as {
+					accessToken: string;
+					refreshToken: string;
+				};
+				setTokens(pair);
+				return true;
+			}
+			if (res.status >= 400 && res.status < 500) return false;
+		} catch {
+			if (attempt === 2) return false;
+		}
 	}
+	return false;
 }
 
 export async function request<T>(

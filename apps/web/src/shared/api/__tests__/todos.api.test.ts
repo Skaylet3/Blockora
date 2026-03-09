@@ -80,6 +80,72 @@ describe('todosApi', () => {
 			});
 		});
 	});
+
+	describe('createTodo — optional fields', () => {
+		it('sends body with description and priority', async () => {
+			const body = {
+				title: 'My task',
+				description: 'Details here',
+				priority: 'LOW' as TodoPriority,
+			};
+			mockRequest.mockResolvedValue({});
+			await todosApi.createTodo(body);
+			expect(mockRequest).toHaveBeenCalledWith('/todos', {
+				method: 'POST',
+				body,
+			});
+		});
+
+		it('sends body with title only (no optional fields)', async () => {
+			const body = { title: 'Minimal task' };
+			mockRequest.mockResolvedValue({});
+			await todosApi.createTodo(body);
+			expect(mockRequest).toHaveBeenCalledWith('/todos', {
+				method: 'POST',
+				body,
+			});
+		});
+	});
+
+	describe('updateTodo — multiple fields', () => {
+		it('sends body with multiple update fields', async () => {
+			const body = {
+				title: 'Updated title',
+				status: 'COMPLETED' as const,
+				priority: 'HIGHEST' as TodoPriority,
+			};
+			mockRequest.mockResolvedValue({});
+			await todosApi.updateTodo('abc-123', body);
+			expect(mockRequest).toHaveBeenCalledWith('/todos/abc-123', {
+				method: 'PATCH',
+				body,
+			});
+		});
+	});
+
+	describe('error propagation', () => {
+		it('getTodos propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Unauthorized'));
+			await expect(todosApi.getTodos()).rejects.toThrow('Unauthorized');
+		});
+
+		it('getTodo propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Not found'));
+			await expect(todosApi.getTodo('missing')).rejects.toThrow('Not found');
+		});
+
+		it('createTodo propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Validation failed'));
+			await expect(
+				todosApi.createTodo({ title: 'Bad' }),
+			).rejects.toThrow('Validation failed');
+		});
+
+		it('deleteTodo propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Forbidden'));
+			await expect(todosApi.deleteTodo('abc')).rejects.toThrow('Forbidden');
+		});
+	});
 });
 
 describe('PRIORITY_TO_UI', () => {

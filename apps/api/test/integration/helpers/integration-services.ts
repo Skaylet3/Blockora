@@ -21,6 +21,7 @@ const config: AppConfig = {
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean),
+  TURNSTILE_SECRET_KEY: 'test-secret',
   NODE_ENV: 'test',
 };
 
@@ -29,7 +30,15 @@ export async function bootstrapIntegrationServices(): Promise<IntegrationService
   await prisma.db.$connect();
 
   const jwtService = new JwtService();
-  const authService = new AuthService(jwtService, prisma, config);
+  const turnstileService = {
+    verify: async () => {},
+  } as unknown as import('../../../src/captcha/turnstile.service').TurnstileService;
+  const authService = new AuthService(
+    jwtService,
+    prisma,
+    turnstileService,
+    config,
+  );
   const blockService = new BlockService(prisma);
 
   return { prisma, authService, blockService };
@@ -43,6 +52,7 @@ export async function closeIntegrationServices(
 
 export async function cleanDatabase(prisma: PrismaService) {
   await prisma.db.refreshToken.deleteMany();
+  await prisma.db.todo.deleteMany();
   await prisma.db.note.deleteMany();
   await prisma.db.block.deleteMany();
   await prisma.db.storage.deleteMany();

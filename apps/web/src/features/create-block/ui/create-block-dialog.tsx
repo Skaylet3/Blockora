@@ -27,7 +27,10 @@ interface CreateBlockDialogProps {
 	open: boolean;
 	onClose: () => void;
 	onSubmit: (
-		block: Omit<Block, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'userId' | 'archivedAt'>,
+		block: Omit<
+			Block,
+			'id' | 'createdAt' | 'updatedAt' | 'status' | 'userId' | 'archivedAt'
+		>,
 	) => Promise<void> | void;
 }
 
@@ -56,10 +59,14 @@ export function CreateBlockDialog({
 			return;
 		}
 
-		const tags = tagsInput
-			.split(',')
-			.map(t => t.trim().toLowerCase())
-			.filter(Boolean);
+		const tags = Array.from(
+			new Set(
+				tagsInput
+					.split(',')
+					.map(t => t.trim().toLowerCase())
+					.filter(Boolean),
+			),
+		);
 
 		setSubmitting(true);
 		try {
@@ -159,7 +166,12 @@ export function CreateBlockDialog({
 					</div>
 
 					<DialogFooter>
-						<Button type='button' variant='outline' onClick={handleClose} disabled={submitting}>
+						<Button
+							type='button'
+							variant='outline'
+							onClick={handleClose}
+							disabled={submitting}
+						>
 							Cancel
 						</Button>
 						<Button type='submit' disabled={submitting}>

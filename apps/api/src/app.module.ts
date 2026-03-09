@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -12,9 +13,16 @@ import { StorageModule } from './storage/storage.module';
 import { NoteModule } from './note/note.module';
 import { TodoModule } from './todo/todo.module';
 
+const isTest = process.env.NODE_ENV === 'test';
+
 @Module({
   imports: [
     ConfigModule,
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 3 },
+      { name: 'medium', ttl: 10000, limit: 20 },
+      { name: 'long', ttl: 60000, limit: 100 },
+    ]),
     PrismaModule,
     AuthModule,
     BlockModule,
@@ -24,6 +32,12 @@ import { TodoModule } from './todo/todo.module';
     TodoModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    ...(isTest
+      ? []
+      : [{ provide: APP_GUARD, useClass: ThrottlerGuard }]),
+  ],
 })
 export class AppModule {}

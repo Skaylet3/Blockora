@@ -51,16 +51,22 @@ export function ProfileForm({
 
 	async function handleSave(e: React.FormEvent) {
 		e.preventDefault();
+		const prevName = savedDisplayName;
+		const optimisticName = displayName.trim();
+		setSavedDisplayName(optimisticName);
 		setSaving(true);
+
 		try {
 			const updated = await authApi.updateProfile({
-				displayName: displayName.trim() || undefined,
+				displayName: optimisticName || undefined,
 			});
 			const name = updated.displayName ?? '';
 			setDisplayName(name);
 			setSavedDisplayName(name);
 			toast.success('Profile saved.');
 		} catch (err) {
+			setSavedDisplayName(prevName);
+			setDisplayName(prevName);
 			const apiErr = err as ApiRequestError;
 			toast.error(apiErr?.messages?.[0] ?? 'Failed to save profile.');
 		} finally {

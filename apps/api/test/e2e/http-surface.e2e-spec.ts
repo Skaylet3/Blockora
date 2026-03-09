@@ -23,7 +23,7 @@ test.describe('HTTP Surface (e2e)', () => {
 
   test('pipes: invalid register payload returns 422', async () => {
     const res = await ctx.api.post('/auth/register', {
-      data: { email: 'invalid-email', password: 'short' },
+      data: { email: 'invalid-email', password: 'short', captchaToken: 'test' },
     });
 
     expect(res.status()).toBe(422);

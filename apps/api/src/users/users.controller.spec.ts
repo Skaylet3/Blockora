@@ -32,5 +32,12 @@ describe('UsersController', () => {
       expect(mockUsersService.updateProfile).toHaveBeenCalledWith('u1', dto);
       expect(result).toEqual(profile);
     });
+
+    it('propagates errors from usersService.updateProfile', async () => {
+      mockUsersService.updateProfile.mockRejectedValue(new Error('DB error'));
+      const user = { sub: 'u1', email: 'a@b.com' };
+
+      await expect(controller.updateMe(user, {})).rejects.toThrow('DB error');
+    });
   });
 });

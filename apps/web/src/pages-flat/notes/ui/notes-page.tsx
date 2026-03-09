@@ -214,14 +214,26 @@ export function NotesPage() {
 	const loadStorages = useCallback(() => {
 		setLoadingStorages(true);
 		setStoragesError(null);
-		storagesApi
-			.getStorages()
-			.then(data => {
-				setStorages(data.map(s => ({ ...s, expanded: false })));
+
+		Promise.all([storagesApi.getStorages(), notesApi.getNotes()])
+			.then(([storagesData, notesData]) => {
+				setStorages(storagesData.map(s => ({ ...s, expanded: false })));
+
+				// Populate notes cache for all storages to show counts immediately
+				const cache = new Map<string, NoteResponse[]>();
+				// Ensure every storage exists in the cache (even with 0 notes)
+				storagesData.forEach(s => cache.set(s.id, []));
+
+				notesData.forEach(note => {
+					const existing = cache.get(note.storageId) || [];
+					cache.set(note.storageId, [...existing, note]);
+				});
+				setNotesCache(cache);
+
 				setLoadingStorages(false);
 			})
 			.catch((err: Error) => {
-				setStoragesError(err.message ?? 'Failed to load storages.');
+				setStoragesError(err.message ?? 'Failed to load data.');
 				setLoadingStorages(false);
 			});
 	}, []);
@@ -250,6 +262,11 @@ export function NotesPage() {
 				parentId: parentId ?? undefined,
 			});
 			setStorages(prev => [...prev, { ...created, expanded: false }]);
+			setNotesCache(prev => {
+				const next = new Map(prev);
+				next.set(created.id, []);
+				return next;
+			});
 			if (parentId) {
 				setStorages(prev =>
 					prev.map(s => (s.id === parentId ? { ...s, expanded: true } : s)),
@@ -279,20 +296,30 @@ export function NotesPage() {
 			];
 		};
 		const idsToDelete = [id, ...getChildrenIds(id)];
+
+		const prevStorages = storages;
+		const prevCache = new Map(notesCache);
+		const prevSelectedStorageId = selectedStorageId;
+
+		setStorages(prev => prev.filter(s => !idsToDelete.includes(s.id)));
+		setNotesCache(prev => {
+			const next = new Map(prev);
+			idsToDelete.forEach(sid => next.delete(sid));
+			return next;
+		});
+		if (selectedStorageId && idsToDelete.includes(selectedStorageId)) {
+			setSelectedStorageId(null);
+			setIsCreatingNote(false);
+			setSelectedNoteId(null);
+		}
+
 		try {
 			await storagesApi.deleteStorage(id);
-			setStorages(prev => prev.filter(s => !idsToDelete.includes(s.id)));
-			setNotesCache(prev => {
-				const next = new Map(prev);
-				idsToDelete.forEach(sid => next.delete(sid));
-				return next;
-			});
-			if (selectedStorageId && idsToDelete.includes(selectedStorageId)) {
-				setSelectedStorageId(null);
-				setIsCreatingNote(false);
-				setSelectedNoteId(null);
-			}
+			toast.success('Storage deleted');
 		} catch (err: unknown) {
+			setStorages(prevStorages);
+			setNotesCache(prevCache);
+			if (prevSelectedStorageId) setSelectedStorageId(prevSelectedStorageId);
 			const message =
 				err instanceof Error ? err.message : 'Failed to delete storage.';
 			toast.error(message);
@@ -342,9 +369,12 @@ export function NotesPage() {
 		if (selectedNoteId) {
 			setSaving(true);
 			try {
+				const title = draftNote.title.trim();
+				const content = draftNote.content.trim();
+
 				const updated = await notesApi.updateNote(selectedNoteId, {
-					title: draftNote.title,
-					content: draftNote.content,
+					title,
+					content,
 				});
 				setNotesCache(prev => {
 					const next = new Map(prev);
@@ -355,6 +385,8 @@ export function NotesPage() {
 					);
 					return next;
 				});
+				// Update draft with trimmed versions
+				setDraftNote({ title, content });
 			} catch (err: unknown) {
 				const message =
 					err instanceof Error ? err.message : 'Failed to save note.';
@@ -365,9 +397,12 @@ export function NotesPage() {
 		} else if (isCreatingNote && selectedStorageId) {
 			setSaving(true);
 			try {
+				const title = draftNote.title.trim();
+				const content = draftNote.content.trim();
+
 				const created = await notesApi.createNote({
-					title: draftNote.title,
-					content: draftNote.content,
+					title,
+					content,
 					storageId: selectedStorageId,
 				});
 				setNotesCache(prev => {
@@ -378,6 +413,8 @@ export function NotesPage() {
 				});
 				setSelectedNoteId(created.id);
 				setIsCreatingNote(false);
+				// Update draft with trimmed versions
+				setDraftNote({ title, content });
 			} catch (err: unknown) {
 				const message =
 					err instanceof Error ? err.message : 'Failed to create note.';
@@ -404,23 +441,28 @@ export function NotesPage() {
 				break;
 			}
 		}
+
+		const prevCache = new Map(notesCache);
+		if (storageId) {
+			setNotesCache(prev => {
+				const next = new Map(prev);
+				const existing = next.get(storageId!) ?? [];
+				next.set(
+					storageId!,
+					existing.filter(n => n.id !== id),
+				);
+				return next;
+			});
+		}
+		if (selectedNoteId === id) {
+			setSelectedNoteId(null);
+		}
+
 		try {
 			await notesApi.deleteNote(id);
-			if (storageId) {
-				setNotesCache(prev => {
-					const next = new Map(prev);
-					const existing = next.get(storageId!) ?? [];
-					next.set(
-						storageId!,
-						existing.filter(n => n.id !== id),
-					);
-					return next;
-				});
-			}
-			if (selectedNoteId === id) {
-				setSelectedNoteId(null);
-			}
+			toast.success('Note deleted');
 		} catch (err: unknown) {
+			setNotesCache(prevCache);
 			const message =
 				err instanceof Error ? err.message : 'Failed to delete note.';
 			toast.error(message);

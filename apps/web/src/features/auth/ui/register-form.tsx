@@ -7,6 +7,7 @@ import { Button, Input, Label } from '@/shared/ui';
 import { SquareDashed } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -15,7 +16,9 @@ export function RegisterForm() {
 	const [email, setEmail] = React.useState('');
 	const [password, setPassword] = React.useState('');
 	const [displayName, setDisplayName] = React.useState('');
+	const [captchaToken, setCaptchaToken] = React.useState('');
 	const [loading, setLoading] = React.useState(false);
+	const turnstileRef = React.useRef<TurnstileInstance | undefined>(undefined);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -27,12 +30,17 @@ export function RegisterForm() {
 			toast.error('Password must be at least 8 characters.');
 			return;
 		}
+		if (!captchaToken) {
+			toast.error('Please complete the CAPTCHA verification.');
+			return;
+		}
 		setLoading(true);
 		try {
 			const pair = await authApi.register({
 				email,
 				password,
 				displayName: displayName.trim() || undefined,
+				captchaToken,
 			});
 			setTokens(pair);
 			document.cookie = 'blockora-session=1; path=/; max-age=86400';
@@ -52,6 +60,8 @@ export function RegisterForm() {
 			}
 		} finally {
 			setLoading(false);
+			setCaptchaToken('');
+			turnstileRef.current?.reset();
 		}
 	}
 
@@ -115,7 +125,18 @@ export function RegisterForm() {
 						/>
 					</div>
 
-					<Button type='submit' className='w-full' disabled={loading}>
+					<Turnstile
+						ref={turnstileRef}
+						siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ''}
+						onSuccess={setCaptchaToken}
+						onError={() => {
+							setCaptchaToken('');
+							toast.error('CAPTCHA failed to load. Please disable content blockers and retry.');
+						}}
+						onExpire={() => setCaptchaToken('')}
+					/>
+
+					<Button type='submit' className='w-full' disabled={loading || !captchaToken}>
 						{loading ? 'Creating account...' : 'Create account'}
 					</Button>
 

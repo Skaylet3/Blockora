@@ -22,6 +22,7 @@ vi.mock('@/shared/api/storages.api', () => ({
 
 vi.mock('@/shared/api/notes.api', () => ({
 	notesApi: {
+		getNotes: vi.fn(),
 		getNotesByStorage: vi.fn(),
 		createNote: vi.fn(),
 		updateNote: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock('@/shared/api/notes.api', () => ({
 	},
 }));
 
+import { notesApi } from '@/shared/api/notes.api';
 import { storagesApi } from '@/shared/api/storages.api';
 import { NotesPage } from '../notes-page';
 
@@ -38,13 +40,19 @@ const mockStoragesApi = storagesApi as {
 	deleteStorage: ReturnType<typeof vi.fn>;
 };
 
+const mockNotesApi = notesApi as {
+	getNotes: ReturnType<typeof vi.fn>;
+};
+
 describe('NotesPage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockNotesApi.getNotes.mockResolvedValue([]);
 	});
 
 	it('shows loading state while getStorages is pending', () => {
 		mockStoragesApi.getStorages.mockReturnValue(new Promise(() => {}));
+		mockNotesApi.getNotes.mockReturnValue(new Promise(() => {}));
 
 		render(<NotesPage />);
 
@@ -89,6 +97,61 @@ describe('NotesPage', () => {
 
 		await waitFor(() =>
 			expect(screen.getByText('My Real Storage')).toBeInTheDocument(),
+		);
+	});
+
+	it('shows multiple storages including nested ones', async () => {
+		mockStoragesApi.getStorages.mockResolvedValue([
+			{
+				id: 's1',
+				name: 'Parent Storage',
+				parentId: null,
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+			{
+				id: 's2',
+				name: 'Child Storage',
+				parentId: 's1',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+		]);
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Parent Storage')).toBeInTheDocument(),
+		);
+		// Child is nested and only visible when parent is expanded — not visible initially
+		expect(screen.queryByText('Child Storage')).not.toBeInTheDocument();
+	});
+
+	it('shows fallback error message when error has no message property', async () => {
+		mockStoragesApi.getStorages.mockRejectedValue({});
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Failed to load data.')).toBeInTheDocument(),
+		);
+	});
+
+	it('shows "Select a storage to get started" in main content area', async () => {
+		mockStoragesApi.getStorages.mockResolvedValue([
+			{
+				id: 's1',
+				name: 'Test Storage',
+				parentId: null,
+				createdAt: '2026-01-01T00:00:00.000Z',
+				updatedAt: '2026-01-01T00:00:00.000Z',
+			},
+		]);
+
+		render(<NotesPage />);
+
+		await waitFor(() =>
+			expect(screen.getByText('Select a storage to get started')).toBeInTheDocument(),
 		);
 	});
 });

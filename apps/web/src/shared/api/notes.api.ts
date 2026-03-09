@@ -21,6 +21,10 @@ export interface UpdateNoteBody {
 }
 
 export const notesApi = {
+	getNotes(): Promise<NoteResponse[]> {
+		return request<NoteResponse[]>('/notes');
+	},
+
 	getNotesByStorage(storageId: string): Promise<NoteResponse[]> {
 		return request<NoteResponse[]>(`/notes?storageId=${storageId}`);
 	},

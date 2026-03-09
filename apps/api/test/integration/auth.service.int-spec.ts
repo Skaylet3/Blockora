@@ -8,6 +8,8 @@ import {
   uniqueEmail,
 } from './helpers/integration-services';
 
+const captchaToken = 'test';
+
 describe('AuthService (integration)', () => {
   let ctx: IntegrationServicesContext;
 
@@ -29,6 +31,7 @@ describe('AuthService (integration)', () => {
     const tokens = await ctx.authService.register({
       email,
       password: 'password123',
+      captchaToken,
     });
 
     expect(tokens.accessToken).toBeTruthy();
@@ -46,19 +49,35 @@ describe('AuthService (integration)', () => {
 
   it('register enforces business rule for duplicate email', async () => {
     const email = uniqueEmail('auth-int-duplicate');
-    await ctx.authService.register({ email, password: 'password123' });
+    await ctx.authService.register({
+      email,
+      password: 'password123',
+      captchaToken,
+    });
 
     await expect(
-      ctx.authService.register({ email, password: 'password123' }),
+      ctx.authService.register({
+        email,
+        password: 'password123',
+        captchaToken,
+      }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('login validates credentials and rejects wrong password', async () => {
     const email = uniqueEmail('auth-int-login');
-    await ctx.authService.register({ email, password: 'password123' });
+    await ctx.authService.register({
+      email,
+      password: 'password123',
+      captchaToken,
+    });
 
     await expect(
-      ctx.authService.login({ email, password: 'wrong-password' }),
+      ctx.authService.login({
+        email,
+        password: 'wrong-password',
+        captchaToken,
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
@@ -67,10 +86,12 @@ describe('AuthService (integration)', () => {
     const initial = await ctx.authService.register({
       email,
       password: 'password123',
+      captchaToken,
     });
 
     const next = await ctx.authService.refresh({
       refreshToken: initial.refreshToken,
+      captchaToken,
     });
 
     expect(next.accessToken).toBeTruthy();
@@ -92,9 +113,10 @@ describe('AuthService (integration)', () => {
     const { refreshToken } = await ctx.authService.register({
       email,
       password: 'password123',
+      captchaToken,
     });
 
-    await ctx.authService.refresh({ refreshToken });
+    await ctx.authService.refresh({ refreshToken, captchaToken });
 
     const user = await ctx.prisma.db.user.findFirst({ where: { email } });
     await ctx.authService.logout(user!.id);

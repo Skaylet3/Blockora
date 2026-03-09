@@ -78,5 +78,29 @@ describe('storagesApi', () => {
 				method: 'DELETE',
 			});
 		});
+
+		it('propagates errors from request', async () => {
+			mockRequest.mockRejectedValue(new Error('Not found'));
+
+			await expect(storagesApi.deleteStorage('missing')).rejects.toThrow(
+				'Not found',
+			);
+		});
+	});
+
+	describe('error propagation', () => {
+		it('getStorages propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Unauthorized'));
+
+			await expect(storagesApi.getStorages()).rejects.toThrow('Unauthorized');
+		});
+
+		it('createStorage propagates request errors', async () => {
+			mockRequest.mockRejectedValue(new Error('Validation failed'));
+
+			await expect(
+				storagesApi.createStorage({ name: 'Bad' }),
+			).rejects.toThrow('Validation failed');
+		});
 	});
 });
