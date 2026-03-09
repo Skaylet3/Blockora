@@ -31,7 +31,7 @@ import { toast } from 'sonner';
 import { TodoPage } from '../todo-page';
 
 const mockGetTodos = todosApi.getTodos as ReturnType<typeof vi.fn>;
-const mockCreateTodo = todosApi.createTodo as ReturnType<typeof vi.fn>;
+const _mockCreateTodo = todosApi.createTodo as ReturnType<typeof vi.fn>;
 const mockUpdateTodo = todosApi.updateTodo as ReturnType<typeof vi.fn>;
 const mockDeleteTodo = todosApi.deleteTodo as ReturnType<typeof vi.fn>;
 

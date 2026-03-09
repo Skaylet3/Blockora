@@ -156,12 +156,16 @@ describe('RegisterPage', () => {
 	it('disables submit button when no CAPTCHA token', async () => {
 		const turnstileMock = await import('@marsidev/react-turnstile');
 		const original = turnstileMock.Turnstile;
-		(turnstileMock as any).Turnstile = () => <div data-testid="turnstile-widget" />;
+		const NoOpTurnstile = () => <div data-testid="turnstile-widget" />;
+		NoOpTurnstile.displayName = 'NoOpTurnstile';
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(turnstileMock as Record<string, any>).Turnstile = NoOpTurnstile;
 
 		render(<RegisterPage />);
 
 		expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
 
-		(turnstileMock as any).Turnstile = original;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(turnstileMock as Record<string, any>).Turnstile = original;
 	});
 });
