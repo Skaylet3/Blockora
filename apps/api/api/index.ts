@@ -39,10 +39,35 @@ async function createApp(): Promise<express.Express> {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
       errorHttpStatusCode: 422,
     }),
   );
+
+  app.use((req: any, res: any, next: any) => {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https://cdn.jsdelivr.net",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join('; ');
+
+    res.setHeader('Content-Security-Policy', csp);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains',
+    );
+    next();
+  });
 
   app.enableCors({
     origin: config.CORS_ORIGINS,
@@ -51,35 +76,41 @@ async function createApp(): Promise<express.Express> {
     credentials: true,
   });
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Blockora API')
-    .setDescription(
-      'REST API for Blockora — authentication and block management',
-    )
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'Authorization',
-        in: 'header',
-      },
-      'access-token',
-    )
-    .addTag('auth', 'Registration, login, token refresh, and logout')
-    .addTag('blocks', 'CRUD operations for user-owned content blocks')
-    .build();
+  if (config.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Blockora API')
+      .setDescription(
+        'REST API for Blockora — authentication and block management',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'Authorization',
+          in: 'header',
+        },
+        'access-token',
+      )
+      .addTag('auth', 'Registration, login, token refresh, and logout')
+      .addTag('blocks', 'CRUD operations for user-owned content blocks')
+      .addTag(
+        'todos',
+        'CRUD operations and block promotion for user-owned todo tasks',
+      )
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
-    customCssUrl: 'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css',
-    customJs: [
-      'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js',
-      'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-standalone-preset.js',
-    ],
-    swaggerOptions: { persistAuthorization: true },
-  });
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      customCssUrl: 'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui.css',
+      customJs: [
+        'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-bundle.js',
+        'https://unpkg.com/swagger-ui-dist@5.31.0/swagger-ui-standalone-preset.js',
+      ],
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   await app.init();
 
